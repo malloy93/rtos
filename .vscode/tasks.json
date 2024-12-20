@@ -1,0 +1,21 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build", // Task "build", do którego odwołuje się launch.json
+            "type": "shell", // Użycie powłoki systemowej do wykonania polecenia
+            "command": "make", // Komenda wywołująca kompilację projektu
+            "args": [
+                "all" // Argument "all", wykonujący domyślny cel kompilacji w Makefile
+            ],
+            "group": {
+                "kind": "build", // Task jest częścią grupy build
+                "isDefault": true // Jest to domyślny task kompilacji
+            },
+            "problemMatcher": [
+                "$gcc" // Matcher problemów, który identyfikuje błędy i ostrzeżenia kompilatora GCC
+            ],
+            "detail": "Task responsible for compiling the project" // Dodatkowy opis tasku
+        }
+    ]
+}

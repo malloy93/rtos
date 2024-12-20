@@ -1,0 +1,8 @@
+build/*
+CORE/build/*
+CMakeFiles/*
+CMakeCache.txt
+rrtos_f429_core.bin
+rrtos_f429_core.elf
+rrtos_f429_core.hex
+rrtos_f429_core.map

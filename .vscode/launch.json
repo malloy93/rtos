@@ -1,0 +1,87 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Run cortex-debug",
+            "type": "cortex-debug",
+            "request": "launch",
+            "servertype": "openocd",
+            "cwd": "${workspaceFolder}",
+            "executable": "${workspaceFolder}/build/rrtos_f429_core.elf",
+            "device": "STM32F429ZI",
+            "configFiles": [
+                "interface/stlink.cfg",
+                "target/stm32f4x.cfg"
+            ],
+            "svdFile": "${workspaceFolder}/STM32F429.svd",
+            // "runToMain": true,
+            "liveWatch": {
+                "enabled": true,
+                "samplesPerSecond": 4
+            },
+            "showDevDebugOutput": "raw",
+            "gdbPath": "/usr/bin/gdb-multiarch",
+            "gdbTarget": "localhost:3333",
+            "preLaunchCommands": [
+                "monitor reset halt"
+            ],
+            "postLaunchCommands": [],
+            "overrideLaunchCommands": [
+                "load",
+                "monitor reset init",
+                "monitor halt"
+            ],
+            "runToEntryPoint": "main",
+            "stopAtEntry": true,
+            "serverStarted": "Info : Listening on port 3333 for gdb connections",
+            "logging": {
+                "engineLogging": true,
+                "trace": true,
+                "traceResponse": true
+            }
+        }
+    ]
+}
+// {
+//   "version": "0.2.0",
+//   "configurations": [
+//       {
+//           "name": "Debug STM32",
+//           "type": "cortex-debug",
+//           "request": "launch",
+//           "servertype": "openocd",
+//           "cwd": "${workspaceFolder}",
+//           "executable": "${workspaceFolder}/build/rrtos_f429_core.elf",
+//           "device": "STM32F429ZI",
+//           "configFiles": [
+//               "interface/stlink.cfg",
+//               "target/stm32f4x.cfg"
+//           ],
+//           "svdFile": "${workspaceFolder}/STM32F429.svd",
+//           "runToMain": true,
+//           "showDevDebugOutput": "raw",
+//           "gdbPath": "/usr/bin/gdb-multiarch",  // Zaktualizuj ścieżkę do gdb-multiarch, jeśli jest inna
+//           "gdbTarget": ":3333",
+//           "preLaunchCommands": [
+//               "set mem inaccessible-by-default off",  // Opcjonalnie, jeśli napotkasz problemy z dostępem do pamięci
+//               "monitor reset init"  // Resetowanie i inicjalizacja targetu
+//           ],
+//           "postLaunchCommands": [],
+//           "overrideLaunchCommands": [
+//               "monitor halt",
+//               "load",
+//               "monitor reset init",
+//               "monitor halt",
+//               "continue"
+//           ],
+//           "runToEntryPoint": "main",  // Punkt wejścia do programu
+//           "stopAtEntry": false,  // Ustaw na true, jeśli chcesz zatrzymać program na punkcie wejścia
+//           "serverStarted": "Info : Listening on port 3333 for gdb connections",
+//           "logging": {
+//     "engineLogging": true,
+//     "trace": true,
+//     "traceResponse": true
+// }
+//       }
+//   ]
+// }
