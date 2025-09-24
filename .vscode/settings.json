@@ -53,8 +53,10 @@
         "typeinfo": "cpp",
         "map": "cpp",
         "sstream": "cpp",
-        "cstring": "cpp"
+        "cstring": "cpp",
+        "stm32l4xx_hal.h": "c"
     },
     "C_Cpp.errorSquiggles": "disabled",
-    "cmake.configureOnOpen": false
+    "cmake.configureOnOpen": false,
+    "cortex-debug.variableUseNaturalFormat": false
 }

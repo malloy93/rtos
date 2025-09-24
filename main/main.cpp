@@ -33,9 +33,9 @@ int main(void)
     std::vector<void (*)()> threads;
     threads.push_back(task0);
     threads.push_back(task1);
-    threads.push_back(task2);
-    threads.push_back(task4);
-    threads.push_back(task5);
+    // threads.push_back(task2);
+    // threads.push_back(task4);
+    // threads.push_back(task5);
 
     HAL_Init();
 
@@ -49,7 +49,7 @@ int main(void)
     utils::IdGen idGen;
     rtKernel = new kernel::Kernel(*logger, idGen);
     rtKernel->addThreads(threads);
-    rtKernel->kernelLaunch(10u);
+    rtKernel->launch(10u);
 
     while (1)
     {

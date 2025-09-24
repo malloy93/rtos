@@ -15,14 +15,14 @@ extern "C" void start_thread_switch();
 namespace kernel
 {
 
-Thread* currentPtr;
-Thread* nextThread;
-Thread* nextThread2;
-Thread* previousThread;
+Thread* finishingThread;
+Thread* startingThread;
 
-void Kernel::initializeStack(uint16_t threadId)
+void Kernel::createStack(uint16_t threadId)
 {
-    auto& threadStack = *stackPointers[threadId];
+    Stack* stack = new Stack{logger, threadId};
+
+    auto& threadStack = *stack;
     logger.logDebug("Init Stack: %d", threadId);
     threadControlBlocks[threadId]->stackPtr = &threadStack[stackSize - 16];
     threadStack[stackSize - 1] = 0x01000000; // thumb xPSR
@@ -39,6 +39,12 @@ void Kernel::initializeStack(uint16_t threadId)
     {
         threadStack[stackSize - i] = 0x04040404;
     }
+    logger.logDebug("Stack memory: ");
+    for (int i = 0; i <= 17; i++)
+    {
+        logger.logDebug(" % 02X ", threadStack[stackSize - i]);
+    }
+    logger.logDebug("% 02X ", &threadStack[stackSize - 16]);
 
     threadControlBlocks[threadId]->setStackPtr((uint32_t)&threadStack);
 }
@@ -47,23 +53,16 @@ uint16_t Kernel::createThread(void (*threadPointer)())
 {
     auto threadId = idGen.getId();
     Thread* thread = new Thread{threadPointer, threadId, &logger};
-    char buffer[256];
-    snprintf(buffer, sizeof(buffer), "Thread created with ID: %d", threadId);
-    logger.logDebug(buffer);
-    auto newBuffer = thread->printThreadInfo();
-    logger.logDebug(newBuffer);
+    logger.logDebug("Thread created with ID: %d", threadId);
+    thread->logLocalInfo();
 
     threadControlBlocks.push_back(thread);
-
-    Stack* threadStack = new Stack{logger, threadId};
-    stackPointers[threadId] = threadStack;
 
     return threadId;
 }
 
 uint8_t Kernel::addThreads(std::vector<void (*)()>& threads)
 {
-    // __disable_irq();
     const auto numThreads = threads.size(); // 4
     logger.logInfo("Adding threads.");
     for (std::size_t i = 0; i < numThreads; i++)
@@ -74,20 +73,32 @@ uint8_t Kernel::addThreads(std::vector<void (*)()>& threads)
     for (std::size_t i = 0; i < numThreads; i++)
     {
         auto threadId = threadControlBlocks[i]->getThreadId();
-        initializeStack(threadId);
+        createStack(threadId);
     }
+    initializeScheduler();
 
-    for (std::size_t i = 0; i < numThreads - 1; i++) // max 3
-    {
-        threadControlBlocks[i]->nextPtr = threadControlBlocks[i + 1];
-    }
-    logger.logDebug("Creating last thread connection");
-    threadControlBlocks[numThreads - 1]->nextPtr = threadControlBlocks[0];
-    currentPtr = threadControlBlocks[0];
-    nextThread = threadControlBlocks[0];
-    // __enable_irq();
     logThreadInfo();
     return 1;
+}
+
+void Kernel::initializeScheduler()
+{
+    for (const auto& thread : threadControlBlocks)
+    {
+        activeStacks.push_back(thread);
+    }
+    startingThread = getNextThread();
+}
+
+Thread* Kernel::getNextThreadRoundRobin()
+{
+    if (currentStackIndex >= activeStacks.size())
+    {
+        currentStackIndex = 0;
+    }
+    auto nextThread = activeStacks[currentStackIndex];
+    currentStackIndex++;
+    return nextThread;
 }
 
 void Kernel::logThreadInfo()
@@ -99,25 +110,7 @@ void Kernel::logThreadInfo()
     }
 }
 
-void Kernel::addThread(void (*threadPointer)())
-{
-    pendingTaskList.push_back(threadPointer);
-    // auto threadId = createThread(threadPointer);
-    // initializeStack(threadId);
-}
-
-void Kernel::add()
-{
-    if (not pendingTaskList.empty())
-    {
-        auto ref = pendingTaskList.back();
-        auto threadId = createThread(ref);
-        initializeStack(threadId);
-        pendingTaskList.pop_back();
-    }
-}
-
-void Kernel::kernelLaunch(uint32_t quanta)
+void Kernel::launch(uint32_t quanta)
 {
     SysTick->CTRL = 0;
     SysTick->VAL = 0;
@@ -133,8 +126,9 @@ void Kernel::kernelLaunch(uint32_t quanta)
 
 extern "C" void changeContext()
 {
-    kernel::previousThread = kernel::nextThread;
-    kernel::nextThread = kernel::previousThread->getNextPtr();
+    kernel::finishingThread = kernel::startingThread;
+    // kernel::startingThread = kernel::finishingThread->getNextPtr();
+    kernel::startingThread = rtKernel->getNextThread();
     INTCTRL = 0x10000000;
 }
 

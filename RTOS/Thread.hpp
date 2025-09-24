@@ -3,6 +3,9 @@
 #include <iostream>
 #include <sstream>
 #include "Logger.hpp"
+
+#include "Types.hpp"
+
 namespace kernel
 {
 class Logger;
@@ -40,6 +43,7 @@ private:
     const uint16_t threadId{0};
     Logger* logger;
     uint8_t priority{0};
+    ThreadState state{ThreadState::READY};
 };
 
 std::ostream& operator<<(std::ostream& os, const Thread& thread);
