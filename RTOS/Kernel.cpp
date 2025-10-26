@@ -1,4 +1,5 @@
 #include "Kernel.hpp"
+#include <algorithm>
 #include "Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f429xx.h"
 #include "Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f4xx.h"
 
@@ -11,12 +12,23 @@
 extern kernel::Kernel* rtKernel;
 
 extern "C" void start_thread_switch();
+extern "C" void context_change();
 
 namespace kernel
 {
 
 Thread* finishingThread;
 Thread* startingThread;
+
+void Kernel::init(Logger& logger, utils::IdGen& idGen)
+{
+    kernelInstance = new Kernel(logger, idGen);
+}
+
+Kernel* Kernel::getInstance()
+{
+    return kernelInstance;
+}
 
 void Kernel::createStack(uint16_t threadId)
 {
@@ -42,7 +54,7 @@ void Kernel::createStack(uint16_t threadId)
     logger.logDebug("Stack memory: ");
     for (int i = 0; i <= 17; i++)
     {
-        logger.logDebug(" % 02X ", threadStack[stackSize - i]);
+        logger.logDebug("%d: 0x%p: 0x%08X", i, &threadStack[stackSize - i], threadStack[stackSize - i]);
     }
     logger.logDebug("% 02X ", &threadStack[stackSize - 16]);
 
@@ -122,12 +134,37 @@ void Kernel::launch(uint32_t quanta)
     start_thread_switch();
 }
 
+void Kernel::remove(uint16_t threadId)
+{
+    logger.logInfo("Removing thread with ID: %d", threadId);
+    auto it = std::remove_if(
+        activeStacks.begin(),
+        activeStacks.end(),
+        [threadId](Thread* thread) { return thread->getThreadId() == threadId; });
+    if (it != activeStacks.end())
+    {
+        activeStacks.erase(it, activeStacks.end());
+        logger.logInfo("Thread with ID: %d removed successfully", threadId);
+    }
+    else
+    {
+        logger.logError("Thread with ID: %d not found", threadId);
+    }
+}
+
+uint16_t Kernel::add(void (*threadPointer)())
+{
+    auto threadId = createThread(threadPointer);
+    createStack(threadId);
+    activeStacks.push_back(threadControlBlocks.back());
+    logger.logInfo("Thread with ID: %d added successfully", threadId);
+    return threadId;
+}
 } // namespace kernel
 
 extern "C" void changeContext()
 {
     kernel::finishingThread = kernel::startingThread;
-    // kernel::startingThread = kernel::finishingThread->getNextPtr();
     kernel::startingThread = rtKernel->getNextThread();
     INTCTRL = 0x10000000;
 }
@@ -141,3 +178,30 @@ extern "C" void changeContext()
 //         __asm("CPSIE I");
 //     }
 // }
+
+// extern "C" void PendSV_Handler()
+// {
+//     context_change();
+// }
+
+// sep - oct 2025 - SVC + refactor
+// nov - scheduler + stack
+// dec - jan - mutex + semaphores + queues
+// feb - mar - sys reconfig
+
+__attribute__((naked)) void SVC_Handler(void) {
+    __asm volatile(
+        // Wybór stack pointera: PSR[2] w EXC_RETURN (LR)
+        "tst lr, #4           \n"   // bit2: 0->MSP, 1->PSP
+        "ite eq               \n"
+        "mrseq r0, msp        \n"
+        "mrsne r0, psp        \n"
+        // Sprawdź obecność ramki FPU (bit4 EXC_RETURN):
+        // bit4 == 0 => rozszerzona ramka (FPU) znajduje się NA STOSIE przed standardową,
+        // trzeba ją ominąć +18 słów (s0-s15,FPSCR,RESERVED) = 18*4 = 72 bajty.
+        "tst lr, #16          \n"   // bit4: 1 = brak ramki FPU, 0 = jest ramka FPU
+        "it eq                \n"
+        "addeq r0, r0, #72    \n"   // pomiń rozszerzoną ramkę
+        "b SVC_Handler_C      \n"
+    );
+}

@@ -1,9 +1,9 @@
 #pragma once
 
-
 namespace kernel
 {
 
+class Thread;
 
 class Scheduler
 {
@@ -19,10 +19,8 @@ public:
         return nullptr; // Placeholder
     }
 
-    private:
+private:
     std::vector<Thread*> activeTasks; // List of tasks to be scheduled
-
-
 };
 
 } // namespace kernel

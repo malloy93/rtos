@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <vector>
 #include "Logger.hpp"
+#include "Scheduler.hpp"
 #include "Stack.hpp"
 #include "Thread.hpp"
 #include "Utils.hpp"
@@ -12,24 +13,27 @@
 
 namespace kernel
 {
+// API CALLS
+extern "C" void changeContext();
+extern "C" void addTask();
+extern "C" void removeTask();
 
+// class Scheduler;
 constexpr int stackSize{500};
 
 class Kernel
 {
 public:
-    Kernel(Logger& logger, utils::IdGen& idGen) : logger{logger}, idGen{idGen}
-    {
-        logger.logInfo("Initializing kernel");
-        prescaler = utils::getClockFreq() / 1000;
-    }
+    static void init(Logger&, utils::IdGen&);
+    static Kernel* getInstance();
 
     uint8_t addThreads(std::vector<void (*)()>&);
     void launch(uint32_t);
 
     void logThreadInfo();
 
-    void add();
+    uint16_t add(void (*)());
+    void remove(uint16_t);
 
     Thread* getNextThread()
     {
@@ -45,9 +49,17 @@ public:
     }
 
 private:
+    MemoryPool memoryPool;
+    Scheduler scheduler;
     void initializeScheduler();
     uint16_t createThread(void (*)());
     void createStack(uint16_t);
+
+    Kernel(Logger& logger, utils::IdGen& idGen) : logger{logger}, idGen{idGen}
+    {
+        logger.logInfo("Initializing kernel");
+        prescaler = utils::getClockFreq() / 1000;
+    }
 
     Logger& logger;
     utils::IdGen& idGen;
@@ -59,13 +71,12 @@ private:
     uint8_t currentStackIndex{0};
 
     Thread* getNextThreadRoundRobin();
-    Thread* getNextThreadPriorityBased() {
+    Thread* getNextThreadPriorityBased()
+    {
         // Implement logic for priority-based scheduling
         return nullptr; // Placeholder
     }
+    inline static Kernel* kernelInstance = nullptr;
 };
 
 } // namespace kernel
-
-extern "C" void changeContext();
-

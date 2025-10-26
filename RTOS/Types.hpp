@@ -9,6 +9,8 @@ using threadStackSize = uint16_t;
 using threadStackPtr = int32_t*;
 
 
+uint16_t constexpr defaultStackSize{1000u};
+
 enum class ThreadState
 {
     READY,

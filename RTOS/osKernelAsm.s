@@ -13,6 +13,7 @@
 .word SysTick_Handler
 
 .global start_thread_switch
+.global context_change
 
 start_thread_switch:
     LDR R0, =_ZN6kernel14startingThreadE  // Załaduj adres globalnego wskaźnika do R0

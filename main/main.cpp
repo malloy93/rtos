@@ -47,7 +47,9 @@ int main(void)
     logger->logInfo("Logger is running");
 
     utils::IdGen idGen;
-    rtKernel = new kernel::Kernel(*logger, idGen);
+    // rtKernel = new kernel::Kernel(*logger, idGen);
+    kernel::Kernel::init(*logger, idGen);
+    rtKernel = kernel::Kernel::getInstance();
     rtKernel->addThreads(threads);
     rtKernel->launch(10u);
 
@@ -117,8 +119,33 @@ void task0()
 }
 void task1()
 {
+    bool isTriggered{false};
+    bool isRemoved{false};
+    uint32_t removedCounter{0};
+    uint32_t triggeredCounter{0};
+    uint16_t id{0};
     while (true)
     {
+        if (thread_switch_counter > 100 and not isTriggered)
+        {
+            removedCounter = thread_switch_counter;
+            isTriggered = true;
+            rtKernel->remove(id);
+        }
+        if (thread_switch_counter > 200 and not isRemoved)
+        {
+            triggeredCounter = thread_switch_counter;
+            isRemoved = true;
+            id = rtKernel->add(task0);
+        }
+        if (thread_switch_counter - removedCounter > 300 and isTriggered)
+        {
+            isTriggered = false;
+        }
+        if (thread_switch_counter - triggeredCounter > 500 and isRemoved)
+        {
+            isRemoved = false;
+        }
         // logger->logInfo("Thread %d", 1);
         HAL_GPIO_TogglePin(greenLed_GPIO_Port, greenLed_Pin);
         HAL_Delay(500);
