@@ -140,6 +140,7 @@ void task1()
         }
         if (thread_switch_counter - removedCounter > 300 and isTriggered)
         {
+            kernel::addTask(task2);
             isTriggered = false;
         }
         if (thread_switch_counter - triggeredCounter > 500 and isRemoved)

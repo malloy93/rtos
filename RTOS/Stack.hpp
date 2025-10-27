@@ -9,10 +9,8 @@ class MemoryPool
 
 struct Stack
 {
-    Stack(Logger& logger, const uint16_t& stackId) : logger{logger}, stackId{stackId}
+    Stack(const uint16_t stackId) : stackId{stackId}
     {
-        // max stacks = 47
-        logger.logDebug("Creating new stack memory. Stack ID: %d", stackId);
         stackMemory = new int32_t[stackSize]; // move stack init from constructor into factory method
     }
     Stack(const Stack&) = delete;
@@ -20,15 +18,10 @@ struct Stack
 
     int32_t& operator[](int16_t index) { return stackMemory[index]; }
 
-    ~Stack()
-    {
-        logger.logDebug("Deleting stack memory. Stack ID: %d", stackId);
-        delete[] stackMemory;
-    }
+    ~Stack() { delete[] stackMemory; }
 
 private:
-    Logger& logger;
-    const uint16_t& stackId;
+    const uint16_t stackId;
     int32_t* stackMemory;
     threadStackSize stackSize{defaultStackSize};
     bool isUsed{false};

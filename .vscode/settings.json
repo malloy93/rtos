@@ -58,5 +58,112 @@
     },
     "C_Cpp.errorSquiggles": "disabled",
     "cmake.configureOnOpen": false,
-    "cortex-debug.variableUseNaturalFormat": false
+    "cortex-debug.variableUseNaturalFormat": false,
+    // nadpisanie dla konkretnego motywu
+    "editor.tokenColorCustomizations": {
+        "[Atom One Dark]": {
+            "textMateRules": [
+                {
+                    "scope": "variable",
+                    "settings": {
+                        "foreground": "#9CDCFE"
+                    }
+                },
+                {
+                    "scope": "entity.name.function",
+                    "settings": {
+                        "foreground": "#DCDCAA",
+                        "fontStyle": ""
+                    }
+                },
+                {
+                    "scope": [
+                        "entity.name.namespace",
+                        "entity.name.namespace.cpp"
+                    ],
+                    "settings": {
+                        "foreground": "#9CDCFE"
+                        // fallback dla TextMate
+                    }
+                },
+                {
+                    "scope": [
+                        "entity.name.type.class",
+                        "entity.name.type.struct",
+                        "entity.name.type.cpp"
+                    ],
+                    "settings": {
+                        "foreground": "#E5C07B"
+                    }
+                },
+                {
+                    "scope": [
+                        "entity.name.scope-resolution.cpp",
+                        "entity.name.scope-resolution" // fallback, gdyby .cpp nie było
+                    ],
+                    "settings": {
+                        "foreground": "#9CDCFE"
+                    }
+                },
+                {
+                    "scope": "punctuation.separator.scope-resolution.cpp", // kolor samego ::
+                    "settings": {
+                        "foreground": "#8A8A8A"
+                    }
+                }
+            ]
+        }
+    },
+    // "editor.semanticHighlighting.enabled": true,
+    // "C_Cpp.enhancedColorization": "enabled",
+    // "editor.tokenColorCustomizations": {
+    //     "[Atom One Dark]": {
+    //         "textMateRules": [
+    //             {
+    //                 "scope": "variable",
+    //                 "settings": {
+    //                     "foreground": "#E06C75"
+    //                 }
+    //             },
+    //             {
+    //                 "scope": "entity.name.function",
+    //                 "settings": {
+    //                     "foreground": "#61AFEF",
+    //                     "fontStyle": ""
+    //                 }
+    //             },
+    //             // NAMESPACE – deklaracje i użycia z ::
+    //             {
+    //                 "scope": [
+    //                     "entity.name.namespace",
+    //                     "entity.name.namespace.cpp",
+    //                     "entity.name.scope.namespace",
+    //                     "support.other.namespace",
+    //                     "meta.namespace.identifier.cpp",
+    //                     "meta.qualified-name.namespace.cpp"
+    //                 ],
+    //                 "settings": {
+    //                     "foreground": "#9CDCFE"
+    //                 }
+    //             },
+    //             // kolor samego operatora ::
+    //             {
+    //                 "scope": "punctuation.separator.scope-resolution.cpp",
+    //                 "settings": {
+    //                     "foreground": "#8A8A8A"
+    //                 }
+    //             },
+    //             // KLASY / TYPY
+    //             {
+    //                 "scope": [
+    //                     "entity.name.type.class",
+    //                     "entity.name.type.struct",
+    //                     "entity.name.type.cpp"
+    //                 ],
+    //                 "settings": {
+    //                     "foreground": "#E5C07B"
+    //                 }
+    //             }
+    //         ]
+    //     }
 }

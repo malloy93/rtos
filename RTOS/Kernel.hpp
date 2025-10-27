@@ -15,8 +15,55 @@ namespace kernel
 {
 // API CALLS
 extern "C" void changeContext();
-extern "C" void addTask();
-extern "C" void removeTask();
+
+enum : uint8_t
+{
+    SVC_ADDTASK = 0,
+    SVC_REMOVETASK = 1,
+    SVC_SUSPENDASK = 2,
+    SVC_RESUMETASK = 3
+
+};
+
+using taskP = void (*)(void);
+
+static inline void addTask(taskP taskPointer)
+{
+    register taskP r0 __asm("r0") = taskPointer; // r0 = adres funkcji (LSB=1 dla Thumb)
+    __asm volatile("svc %[imm]"
+                   : "+r"(r0) // r0 jest “żywe” po SVC (gdybyś chciał zwrot)
+                   : [imm] "I"(SVC_ADDTASK)
+                   : "memory");
+    // __asm volatile("svc %[imm]" ::[imm] "I"(SVC_ADDTASK) : "memory");
+}
+static inline void removeTask(uint16_t threadId)
+{
+    register uint16_t r0 __asm("r0") = threadId; // r0 = adres funkcji (LSB=1 dla Thumb)
+    __asm volatile("svc %[imm]"
+                   : "+r"(r0) // r0 jest “żywe” po SVC (gdybyś chciał zwrot)
+                   : [imm] "I"(SVC_REMOVETASK)
+                   : "memory");
+    // __asm volatile("svc %[imm]" ::[imm] "I"(SVC_ADDTASK) : "memory");
+}
+
+static inline void suspendTask(uint16_t threadId)
+{
+    register uint16_t r0 __asm("r0") = threadId; // r0 = adres funkcji (LSB=1 dla Thumb)
+    __asm volatile("svc %[imm]"
+                   : "+r"(r0) // r0 jest “żywe” po SVC (gdybyś chciał zwrot)
+                   : [imm] "I"(SVC_SUSPENDASK)
+                   : "memory");
+    // __asm volatile("svc %[imm]" ::[imm] "I"(SVC_ADDTASK) : "memory");
+}
+static inline void resumeTask(uint16_t threadId)
+{
+    register uint16_t r0 __asm("r0") = threadId; // r0 = adres funkcji (LSB=1 dla Thumb)
+    __asm volatile("svc %[imm]"
+                   : "+r"(r0) // r0 jest “żywe” po SVC (gdybyś chciał zwrot)
+                   : [imm] "I"(SVC_RESUMETASK)
+                   : "memory");
+    // __asm volatile("svc %[imm]" ::[imm] "I"(SVC_ADDTASK) : "memory");
+}
 
 // class Scheduler;
 constexpr int stackSize{500};

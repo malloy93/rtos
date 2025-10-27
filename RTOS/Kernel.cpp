@@ -32,7 +32,7 @@ Kernel* Kernel::getInstance()
 
 void Kernel::createStack(uint16_t threadId)
 {
-    Stack* stack = new Stack{logger, threadId};
+    Stack* stack = new Stack{threadId};
 
     auto& threadStack = *stack;
     logger.logDebug("Init Stack: %d", threadId);
@@ -189,19 +189,48 @@ extern "C" void changeContext()
 // dec - jan - mutex + semaphores + queues
 // feb - mar - sys reconfig
 
-__attribute__((naked)) void SVC_Handler(void) {
+extern "C" __attribute__((naked)) void SVC_Handler(void)
+{
     __asm volatile(
         // Wybór stack pointera: PSR[2] w EXC_RETURN (LR)
-        "tst lr, #4           \n"   // bit2: 0->MSP, 1->PSP
+        "tst lr, #4           \n" // bit2: 0->MSP, 1->PSP
         "ite eq               \n"
         "mrseq r0, msp        \n"
         "mrsne r0, psp        \n"
         // Sprawdź obecność ramki FPU (bit4 EXC_RETURN):
         // bit4 == 0 => rozszerzona ramka (FPU) znajduje się NA STOSIE przed standardową,
         // trzeba ją ominąć +18 słów (s0-s15,FPSCR,RESERVED) = 18*4 = 72 bajty.
-        "tst lr, #16          \n"   // bit4: 1 = brak ramki FPU, 0 = jest ramka FPU
+        "tst lr, #16          \n" // bit4: 1 = brak ramki FPU, 0 = jest ramka FPU
         "it eq                \n"
-        "addeq r0, r0, #72    \n"   // pomiń rozszerzoną ramkę
-        "b SVC_Handler_C      \n"
-    );
+        "addeq r0, r0, #72    \n" // pomiń rozszerzoną ramkę
+        "b SVC_Handler_C      \n");
+}
+
+extern "C" void SVC_Handler_C(uint32_t* stacked)
+{
+    uint32_t pc = stacked[6];
+    uint8_t svc_imm = *reinterpret_cast<uint8_t*>(pc - 2);
+
+    
+
+    switch (svc_imm)
+    {
+        case kernel::SVC_ADDTASK:
+        {
+            kernel::taskP cb = reinterpret_cast<kernel::taskP>(stacked[0]);
+            rtKernel->add(cb);
+            break;
+        }
+            // case kernel::SVC_REMOVETASK:
+            //     // sys_set_psp(stacked[0]);
+            //     break;
+
+            // case kernel::SVC_GET_TICKS:
+            //     // stacked[0] = sys_get_ticks();
+            //     break;
+
+        default:
+            // Nieznany SVC
+            break;
+    }
 }

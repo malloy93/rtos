@@ -150,16 +150,24 @@ void UsageFault_Handler(void)
 /**
  * @brief This function handles System service call via SWI instruction.
  */
-void SVC_Handler(void)
-{
-    /* USER CODE BEGIN SVCall_IRQn 0 */
+// __attribute__((naked)) void SVC_Handler(void)
+// {
+//     __asm volatile(
+//         // Wybór stack pointera: PSR[2] w EXC_RETURN (LR)
+//         "tst lr, #4           \n" // bit2: 0->MSP, 1->PSP
+//         "ite eq               \n"
+//         "mrseq r0, msp        \n"
+//         "mrsne r0, psp        \n"
+//         // Sprawdź obecność ramki FPU (bit4 EXC_RETURN):
+//         // bit4 == 0 => rozszerzona ramka (FPU) znajduje się NA STOSIE przed standardową,
+//         // trzeba ją ominąć +18 słów (s0-s15,FPSCR,RESERVED) = 18*4 = 72 bajty.
+//         "tst lr, #16          \n" // bit4: 1 = brak ramki FPU, 0 = jest ramka FPU
+//         "it eq                \n"
+//         "addeq r0, r0, #72    \n" // pomiń rozszerzoną ramkę
+//         "b SVC_Handler_C      \n");
+// }
 
-    /* USER CODE END SVCall_IRQn 0 */
-    /* USER CODE BEGIN SVCall_IRQn 1 */
-
-    /* USER CODE END SVCall_IRQn 1 */
-}
-
+// void SVC_Handler_C(void) {}
 /**
  * @brief This function handles Debug monitor.
  */
