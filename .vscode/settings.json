@@ -90,7 +90,10 @@
                     "scope": [
                         "entity.name.type.class",
                         "entity.name.type.struct",
-                        "entity.name.type.cpp"
+                        "entity.name.type.cpp",
+                        "entity.name.type.enum",
+                        "entity.name.type.enum.cpp",
+                        "entity.name.type.parameter.cpp"
                     ],
                     "settings": {
                         "foreground": "#E5C07B"

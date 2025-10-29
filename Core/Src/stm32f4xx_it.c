@@ -90,7 +90,7 @@ void HardFault_Handler(void)
     volatile uint32_t mmar = SCB->MMFAR; // Rejestr adresu błędu zarządzania pamięcią
     volatile uint32_t bfar = SCB->BFAR; // Rejestr adresu błędu busa
 
-    while (1)
+     while (1)
     {
         // Zatrzymaj tutaj, aby debugować
     }

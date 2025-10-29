@@ -16,7 +16,7 @@
 .global context_change
 
 start_thread_switch:
-    LDR R0, =_ZN6kernel14startingThreadE  // Załaduj adres globalnego wskaźnika do R0
+    LDR R0, =_ZN4core14startingThreadE  // Załaduj adres globalnego wskaźnika do R0
     LDR R0, [R0]                      // Załaduj wartość globalnego wskaźnika (adres pierwszego wątku) do R0
     LDR R0, [R0]                      // Przesuń R0 na adres stackPtr w strukturze Thread (pierwsze pole)
     MSR PSP, R0                       // Ustaw PSP na adres stosu pierwszego wątku
@@ -42,12 +42,12 @@ PendSV_Handler:
     // Store current context
     MRS R0, PSP                  // Skopiuj aktualną wartość PSP do R0 (PSP wskazuje na stos bieżącego wątku)
     STMDB R0!, {R4-R11}          // Zapisz rejestry R4-R11 na stosie bieżącego wątku
-    LDR R1, =_ZN6kernel15finishingThreadE	  // Załaduj adres wskaźnika na kończący się wątek
+    LDR R1, =_ZN4core15finishingThreadE	  // Załaduj adres wskaźnika na kończący się wątek
     LDR R2, [R1]                 // Załaduj wskaźnik na kończący się wątek
     STR R0, [R2]                 // Zaktualizuj wskaźnik stosu w kończącym się wątku (zapisz PSP bieżącego wątku)
 
     // Switch to new thread
-    LDR R0, =_ZN6kernel14startingThreadE     // Załaduj adres wskaźnika na nowy wątek
+    LDR R0, =_ZN4core14startingThreadE     // Załaduj adres wskaźnika na nowy wątek
     LDR R0, [R0]                 // Pobierz wskaźnik na nowy wątek
     LDR R0, [R0]                 // Załaduj wskaźnik stosu nowego wątku (PSP nowego wątku)
     MSR PSP, R0                  // Ustaw PSP na stos nowego wątku

@@ -3,7 +3,7 @@
 #include <cstdio>
 #include <cstring>
 
-namespace kernel
+namespace core
 {
 
 // void Logger::sendMessage(const char* msg)
@@ -14,4 +14,4 @@ namespace kernel
 //     HAL_UART_Transmit(&comPort, reinterpret_cast<const uint8_t*>(buffer), size, HAL_MAX_DELAY);
 // }
 
-} // namespace kernel
+} // namespace core

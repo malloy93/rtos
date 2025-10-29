@@ -1,6 +1,6 @@
 #pragma once
 
-namespace kernel
+namespace core
 {
 
 class Thread;
@@ -23,4 +23,4 @@ private:
     std::vector<Thread*> activeTasks; // List of tasks to be scheduled
 };
 
-} // namespace kernel
+} // namespace core

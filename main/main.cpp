@@ -12,9 +12,9 @@ volatile uint32_t thread_switch_counter = 0;
 int x{0};
 volatile uint32_t counters[3];
 
-kernel::Logger* logger;
+// core::Logger* logger;
 
-kernel::Kernel* rtKernel;
+// core::RTCore* rtKernel;
 
 void SystemClock_Config(void);
 
@@ -43,13 +43,12 @@ int main(void)
 
     MX_GPIO_Init();
     MX_USART1_UART_Init();
-    logger = new kernel::Logger(huart1, kernel::LogLevel::DEBUG);
-    logger->logInfo("Logger is running");
-
+    core::Logger::init(&huart1, core::LogLevel::DEBUG);
+    LOG_INFO("Logger initialized");
     utils::IdGen idGen;
-    // rtKernel = new kernel::Kernel(*logger, idGen);
-    kernel::Kernel::init(*logger, idGen);
-    rtKernel = kernel::Kernel::getInstance();
+    // rtKernel = new kernel::RTCore(*logger, idGen);
+    core::RTCore::init(idGen);
+    auto rtKernel = core::RTCore::getInstance();
     rtKernel->addThreads(threads);
     rtKernel->launch(10u);
 
@@ -130,24 +129,27 @@ void task1()
         {
             removedCounter = thread_switch_counter;
             isTriggered = true;
-            rtKernel->remove(id);
+            core::removeTask(id);
+            // rtKernel->remove(id);
         }
         if (thread_switch_counter > 200 and not isRemoved)
         {
             triggeredCounter = thread_switch_counter;
             isRemoved = true;
-            id = rtKernel->add(task0);
+            core::addTask(task0);
+            //
+            // id = rtKernel->add(task0);
         }
         if (thread_switch_counter - removedCounter > 300 and isTriggered)
         {
-            kernel::addTask(task2);
+            // core::addTask(task2);
             isTriggered = false;
         }
         if (thread_switch_counter - triggeredCounter > 500 and isRemoved)
         {
             isRemoved = false;
         }
-        // logger->logInfo("Thread %d", 1);
+        // LOG_INFO("Thread %d", 1);
         HAL_GPIO_TogglePin(greenLed_GPIO_Port, greenLed_Pin);
         HAL_Delay(500);
         counters[1]++;
@@ -157,7 +159,7 @@ void task2()
 {
     while (true)
     {
-        // logger->logInfo("Thread 2");
+        // LOG_INFO("Thread 2");
         HAL_GPIO_TogglePin(redLed_GPIO_Port, redLed_Pin);
         HAL_Delay(500);
         counters[2]++;
@@ -167,7 +169,7 @@ void task4()
 {
     while (true)
     {
-        // logger->logInfo("Thread 3");
+        // LOG_INFO("Thread 3");
         HAL_GPIO_TogglePin(redLed_GPIO_Port, redLed_Pin);
         HAL_Delay(500);
         counters[2]++;
@@ -183,10 +185,10 @@ void task5()
 {
     while (true)
     {
-        // logger->logInfo("Thread 4");
+        // LOG_INFO("Thread 4");
         if (not blockers)
         {
-            // logger->logDebug("Thread 5 is running");
+            // LOG_DEBUG("Thread 5 is running");
             blockers = true;
         }
     }

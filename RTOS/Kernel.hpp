@@ -11,7 +11,7 @@
 #define SYSPRI3 (*((volatile uint32_t*)0xE000ED20))
 #define INTCTRL (*((volatile uint32_t*)0xE000ED04))
 
-namespace kernel
+namespace core
 {
 // API CALLS
 extern "C" void changeContext();
@@ -68,11 +68,11 @@ static inline void resumeTask(uint16_t threadId)
 // class Scheduler;
 constexpr int stackSize{500};
 
-class Kernel
+class RTCore
 {
 public:
-    static void init(Logger&, utils::IdGen&);
-    static Kernel* getInstance();
+    static void init(utils::IdGen&);
+    static RTCore* getInstance();
 
     uint8_t addThreads(std::vector<void (*)()>&);
     void launch(uint32_t);
@@ -81,6 +81,7 @@ public:
 
     uint16_t add(void (*)());
     void remove(uint16_t);
+    void suspend(uint16_t);
 
     Thread* getNextThread()
     {
@@ -102,19 +103,19 @@ private:
     uint16_t createThread(void (*)());
     void createStack(uint16_t);
 
-    Kernel(Logger& logger, utils::IdGen& idGen) : logger{logger}, idGen{idGen}
+    RTCore(utils::IdGen& idGen) : idGen{idGen}
     {
-        logger.logInfo("Initializing kernel");
+        LOG_INFO("Initializing core");
         prescaler = utils::getClockFreq() / 1000;
     }
 
-    Logger& logger;
     utils::IdGen& idGen;
 
     uint32_t prescaler{};
     std::vector<Thread*> threadControlBlocks; // change to unordered_map [threadId, tcb] or not // no this is dumb
     SchedulerType schedulerType{SchedulerType::ROUND_ROBIN};
     std::vector<Thread*> activeStacks;
+    std::vector<Stack*> mappedStacks;
     uint8_t currentStackIndex{0};
 
     Thread* getNextThreadRoundRobin();
@@ -123,7 +124,7 @@ private:
         // Implement logic for priority-based scheduling
         return nullptr; // Placeholder
     }
-    inline static Kernel* kernelInstance = nullptr;
+    inline static RTCore* kernelInstance = nullptr;
 };
 
-} // namespace kernel
+} // namespace core

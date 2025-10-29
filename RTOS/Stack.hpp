@@ -1,6 +1,6 @@
 #pragma once
 #include "Types.hpp"
-namespace kernel
+namespace core
 {
 
 class MemoryPool
@@ -17,6 +17,7 @@ struct Stack
     Stack& operator=(const Stack&) = delete;
 
     int32_t& operator[](int16_t index) { return stackMemory[index]; }
+    const uint16_t& getStackId() const { return stackId; }
 
     ~Stack() { delete[] stackMemory; }
 
@@ -27,4 +28,4 @@ private:
     bool isUsed{false};
 };
 
-} // namespace kernel
+} // namespace core

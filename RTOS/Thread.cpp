@@ -1,7 +1,7 @@
 #include "Thread.hpp"
 #include "Logger.hpp"
 
-namespace kernel
+namespace core
 {
 std::ostream& operator<<(std::ostream& os, const Thread& thread)
 {
@@ -28,8 +28,8 @@ const char* Thread::printThreadInfo()
 void Thread::logLocalInfo()
 {
     auto newBuffer = printThreadInfo();
-    logger->logDebug(newBuffer);
-    // logger->logDebug(oss.str());
+    LOG_DEBUG(newBuffer);
+    // LOG_DEBUG(oss.str());
 }
 
 void Thread::logSizeChange()
@@ -37,11 +37,11 @@ void Thread::logSizeChange()
     // if (threadId == 0)
     // {
     auto remainingStackSize = (uint32_t)stackPtr - startPtr;
-    logger->logDebug("Thread: ", threadId);
-    // logger->logDebug("Start stack size: ", startPtr);
-    // logger->logDebug("Current stack size: ", (uint32_t)stackPtr);
-    logger->logDebug("Used stack size: ", remainingStackSize);
+    LOG_DEBUG("Thread: ", threadId);
+    // LOG_DEBUG("Start stack size: ", startPtr);
+    // LOG_DEBUG("Current stack size: ", (uint32_t)stackPtr);
+    LOG_DEBUG("Used stack size: ", remainingStackSize);
     // }
 }
 
-} // namespace kernel
+} // namespace core

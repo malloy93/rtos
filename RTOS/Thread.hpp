@@ -6,17 +6,14 @@
 
 #include "Types.hpp"
 
-namespace kernel
+namespace core
 {
 class Logger;
 struct Thread
 {
     Thread() = default;
     Thread(void (*threadPointer)(void) &) : threadPointer{threadPointer} {}
-    Thread(void (*threadPointer)(void) &, uint16_t threadId, Logger* logger)
-        : threadPointer{threadPointer}, threadId{threadId}, logger{logger}
-    {
-    }
+    Thread(void (*threadPointer)(void) &, uint16_t threadId) : threadPointer{threadPointer}, threadId{threadId} {}
     int32_t* stackPtr;
     Thread* nextPtr;
     void (*threadPointer)(void);
@@ -26,7 +23,7 @@ struct Thread
         // logSizeChange();
         // logLocalInfo();
         // nextPtr->logLocalInfo();
-        // logger->logDebug("  ");
+        // LOG_DEBUG("  ");
         return nextPtr;
     }
 
@@ -41,10 +38,9 @@ struct Thread
 private:
     uint32_t startPtr;
     const uint16_t threadId{0};
-    Logger* logger;
     uint8_t priority{0};
     ThreadState state{ThreadState::READY};
 };
 
 std::ostream& operator<<(std::ostream& os, const Thread& thread);
-} // namespace kernel
+} // namespace core

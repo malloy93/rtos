@@ -9,33 +9,33 @@
 #define __ASM __asm
 #endif
 
-extern kernel::Kernel* rtKernel;
+extern core::RTCore* rtKernel;
 
 extern "C" void start_thread_switch();
 extern "C" void context_change();
 
-namespace kernel
+namespace core
 {
 
 Thread* finishingThread;
 Thread* startingThread;
 
-void Kernel::init(Logger& logger, utils::IdGen& idGen)
+void RTCore::init(utils::IdGen& idGen)
 {
-    kernelInstance = new Kernel(logger, idGen);
+    kernelInstance = new RTCore(idGen);
 }
 
-Kernel* Kernel::getInstance()
+RTCore* RTCore::getInstance()
 {
     return kernelInstance;
 }
 
-void Kernel::createStack(uint16_t threadId)
+void RTCore::createStack(uint16_t threadId)
 {
     Stack* stack = new Stack{threadId};
 
     auto& threadStack = *stack;
-    logger.logDebug("Init Stack: %d", threadId);
+    LOG_DEBUG("Init Stack: %d", threadId);
     threadControlBlocks[threadId]->stackPtr = &threadStack[stackSize - 16];
     threadStack[stackSize - 1] = 0x01000000; // thumb xPSR
     threadStack[stackSize - 2] = (uint32_t)(threadControlBlocks[threadId]->threadPointer);
@@ -51,21 +51,22 @@ void Kernel::createStack(uint16_t threadId)
     {
         threadStack[stackSize - i] = 0x04040404;
     }
-    logger.logDebug("Stack memory: ");
+    LOG_DEBUG("Stack memory: ");
     for (int i = 0; i <= 17; i++)
     {
-        logger.logDebug("%d: 0x%p: 0x%08X", i, &threadStack[stackSize - i], threadStack[stackSize - i]);
+        LOG_DEBUG("%d: 0x%p: 0x%08X", i, &threadStack[stackSize - i], threadStack[stackSize - i]);
     }
-    logger.logDebug("% 02X ", &threadStack[stackSize - 16]);
+    LOG_DEBUG("% 02X ", &threadStack[stackSize - 16]);
 
     threadControlBlocks[threadId]->setStackPtr((uint32_t)&threadStack);
+    mappedStacks.push_back(stack);
 }
 
-uint16_t Kernel::createThread(void (*threadPointer)())
+uint16_t RTCore::createThread(void (*threadPointer)())
 {
     auto threadId = idGen.getId();
-    Thread* thread = new Thread{threadPointer, threadId, &logger};
-    logger.logDebug("Thread created with ID: %d", threadId);
+    Thread* thread = new Thread{threadPointer, threadId};
+    LOG_DEBUG("Thread created with ID: %d", threadId);
     thread->logLocalInfo();
 
     threadControlBlocks.push_back(thread);
@@ -73,10 +74,10 @@ uint16_t Kernel::createThread(void (*threadPointer)())
     return threadId;
 }
 
-uint8_t Kernel::addThreads(std::vector<void (*)()>& threads)
+uint8_t RTCore::addThreads(std::vector<void (*)()>& threads)
 {
     const auto numThreads = threads.size(); // 4
-    logger.logInfo("Adding threads.");
+    LOG_INFO("Adding threads.");
     for (std::size_t i = 0; i < numThreads; i++)
     {
         createThread(threads.at(i));
@@ -93,7 +94,7 @@ uint8_t Kernel::addThreads(std::vector<void (*)()>& threads)
     return 1;
 }
 
-void Kernel::initializeScheduler()
+void RTCore::initializeScheduler()
 {
     for (const auto& thread : threadControlBlocks)
     {
@@ -102,7 +103,7 @@ void Kernel::initializeScheduler()
     startingThread = getNextThread();
 }
 
-Thread* Kernel::getNextThreadRoundRobin()
+Thread* RTCore::getNextThreadRoundRobin()
 {
     if (currentStackIndex >= activeStacks.size())
     {
@@ -113,16 +114,16 @@ Thread* Kernel::getNextThreadRoundRobin()
     return nextThread;
 }
 
-void Kernel::logThreadInfo()
+void RTCore::logThreadInfo()
 {
     for (const auto& thread : threadControlBlocks)
     {
         auto newBuffer = thread->printThreadInfo();
-        logger.logDebug(newBuffer);
+        LOG_DEBUG(newBuffer);
     }
 }
 
-void Kernel::launch(uint32_t quanta)
+void RTCore::launch(uint32_t quanta)
 {
     SysTick->CTRL = 0;
     SysTick->VAL = 0;
@@ -130,13 +131,45 @@ void Kernel::launch(uint32_t quanta)
     SYSPRI3 = (SYSPRI3 & 0x00FFFFFF) | 0xE0000000;
 
     SysTick->CTRL = 0x00000007;
-    logger.logInfo("Launching scheduler");
+    LOG_INFO("Launching scheduler");
     start_thread_switch();
 }
 
-void Kernel::remove(uint16_t threadId)
+void RTCore::remove(uint16_t threadId)
 {
-    logger.logInfo("Removing thread with ID: %d", threadId);
+    LOG_INFO("Removing thread with ID: %d", threadId);
+    auto activeit = std::remove_if(
+        activeStacks.begin(),
+        activeStacks.end(),
+        [threadId](Thread* thread) { return thread->getThreadId() == threadId; });
+    if (activeit != activeStacks.end())
+    {
+        activeStacks.erase(activeit, activeStacks.end());
+        LOG_INFO("Thread with ID: %d removed successfully", threadId);
+    }
+    else
+    {
+        LOG_ERROR("Thread with ID: %d not found", threadId);
+    }
+
+    LOG_DEBUG("Removing stack for thread ID: %d", threadId);
+    auto it = std::remove_if(
+        mappedStacks.begin(), mappedStacks.end(), [threadId](Stack* stack) { return stack->getStackId() == threadId; });
+    if (it != mappedStacks.end())
+    {
+        delete *it;
+        mappedStacks.erase(it, mappedStacks.end());
+        LOG_INFO("stack with ID: %d removed successfully", threadId);
+    }
+    else
+    {
+        LOG_ERROR("stack with ID: %d not found", threadId);
+    }
+}
+
+void RTCore::suspend(uint16_t threadId)
+{
+    LOG_INFO("Suspending thread with ID: %d", threadId);
     auto it = std::remove_if(
         activeStacks.begin(),
         activeStacks.end(),
@@ -144,28 +177,28 @@ void Kernel::remove(uint16_t threadId)
     if (it != activeStacks.end())
     {
         activeStacks.erase(it, activeStacks.end());
-        logger.logInfo("Thread with ID: %d removed successfully", threadId);
+        LOG_INFO("Thread with ID: %d suspended successfully", threadId);
     }
     else
     {
-        logger.logError("Thread with ID: %d not found", threadId);
+        LOG_ERROR("Thread with ID: %d not found", threadId);
     }
 }
 
-uint16_t Kernel::add(void (*threadPointer)())
+uint16_t RTCore::add(void (*threadPointer)())
 {
     auto threadId = createThread(threadPointer);
     createStack(threadId);
     activeStacks.push_back(threadControlBlocks.back());
-    logger.logInfo("Thread with ID: %d added successfully", threadId);
+    LOG_INFO("Thread with ID: %d added successfully", threadId);
     return threadId;
 }
-} // namespace kernel
+} // namespace core
 
 extern "C" void changeContext()
 {
-    kernel::finishingThread = kernel::startingThread;
-    kernel::startingThread = rtKernel->getNextThread();
+    core::finishingThread = core::startingThread;
+    core::startingThread = core::RTCore::getInstance()->getNextThread();
     INTCTRL = 0x10000000;
 }
 
@@ -185,7 +218,7 @@ extern "C" void changeContext()
 // }
 
 // sep - oct 2025 - SVC + refactor
-// nov - scheduler + stack
+// nov - scheduler + stack + refactor
 // dec - jan - mutex + semaphores + queues
 // feb - mar - sys reconfig
 
@@ -211,23 +244,28 @@ extern "C" void SVC_Handler_C(uint32_t* stacked)
     uint32_t pc = stacked[6];
     uint8_t svc_imm = *reinterpret_cast<uint8_t*>(pc - 2);
 
-    
+    core::RTCore* core = core::RTCore::getInstance();
 
     switch (svc_imm)
     {
-        case kernel::SVC_ADDTASK:
+        case core::SVC_ADDTASK:
         {
-            kernel::taskP cb = reinterpret_cast<kernel::taskP>(stacked[0]);
-            rtKernel->add(cb);
+            core::taskP cb = reinterpret_cast<core::taskP>(stacked[0]);
+            core->add(cb);
             break;
         }
-            // case kernel::SVC_REMOVETASK:
-            //     // sys_set_psp(stacked[0]);
-            //     break;
-
-            // case kernel::SVC_GET_TICKS:
-            //     // stacked[0] = sys_get_ticks();
-            //     break;
+        case core::SVC_REMOVETASK:
+        {
+            uint16_t threadId = static_cast<uint16_t>(stacked[0]);
+            core->remove(threadId);
+            break;
+        }
+        case core::SVC_SUSPENDASK:
+        {
+            uint16_t threadId = static_cast<uint16_t>(stacked[0]);
+            core->suspend(threadId);
+            break;
+        }
 
         default:
             // Nieznany SVC
