@@ -1,7 +1,9 @@
-#include "Kernel.hpp"
+#include "Core.hpp"
 #include <algorithm>
 #include "Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f429xx.h"
 #include "Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f4xx.h"
+// #include "MemoryPool.hpp"
+#include "SysApi.hpp"
 
 // #include "Drivers/CMSIS/Include/cmsis_armcc.h"
 
@@ -32,10 +34,18 @@ RTCore* RTCore::getInstance()
 
 void RTCore::createStack(uint16_t threadId)
 {
-    Stack* stack = new Stack{threadId};
+    // Stack* stack = new Stack{threadId};
+    auto stackId = memoryPool.allocateStack(StackSize::SIZE_1kB);
+    if (stackId == invalidStackId)
+    {
+        LOG_ERROR("Failed to allocate stack for thread ID: %d", threadId);
+        return;
+    }
+    auto& newstack = *memoryPool.getStack(stackId);
 
-    auto& threadStack = *stack;
-    LOG_DEBUG("Init Stack: %d", threadId);
+    auto& threadStack = newstack.stackPointer;
+    auto stackSize = static_cast<uint16_t>(newstack.size);
+    LOG_DEBUG("Init Stack: %d, for thread: %d", stackId, threadId);
     threadControlBlocks[threadId]->stackPtr = &threadStack[stackSize - 16];
     threadStack[stackSize - 1] = 0x01000000; // thumb xPSR
     threadStack[stackSize - 2] = (uint32_t)(threadControlBlocks[threadId]->threadPointer);
@@ -51,15 +61,16 @@ void RTCore::createStack(uint16_t threadId)
     {
         threadStack[stackSize - i] = 0x04040404;
     }
-    LOG_DEBUG("Stack memory: ");
-    for (int i = 0; i <= 17; i++)
-    {
-        LOG_DEBUG("%d: 0x%p: 0x%08X", i, &threadStack[stackSize - i], threadStack[stackSize - i]);
-    }
-    LOG_DEBUG("% 02X ", &threadStack[stackSize - 16]);
+    // LOG_DEBUG("Stack memory: ");
+    // for (int i = 0; i <= 17; i++)
+    // {
+    //     LOG_DEBUG("%d: 0x%p: 0x%08X", i, &threadStack[stackSize - i], threadStack[stackSize - i]);
+    // }
+    // LOG_DEBUG("% 02X ", &threadStack[stackSize - 16]);
 
     threadControlBlocks[threadId]->setStackPtr((uint32_t)&threadStack);
-    mappedStacks.push_back(stack);
+    threadControlBlocks[threadId]->setStackId(stackId);
+    // mappedStacks.push_back(stack);
 }
 
 uint16_t RTCore::createThread(void (*threadPointer)())
@@ -138,45 +149,33 @@ void RTCore::launch(uint32_t quanta)
 void RTCore::remove(uint16_t threadId)
 {
     LOG_INFO("Removing thread with ID: %d", threadId);
-    auto activeit = std::remove_if(
+    auto foundThread = std::find_if(
         activeStacks.begin(),
         activeStacks.end(),
         [threadId](Thread* thread) { return thread->getThreadId() == threadId; });
-    if (activeit != activeStacks.end())
+    if (foundThread != activeStacks.end())
     {
-        activeStacks.erase(activeit, activeStacks.end());
+        uint8_t stackId = (*foundThread)->getStackId();
+        activeStacks.erase(foundThread); // erase only this one element
         LOG_INFO("Thread with ID: %d removed successfully", threadId);
+        memoryPool.deallocateStack(stackId);
     }
     else
     {
         LOG_ERROR("Thread with ID: %d not found", threadId);
-    }
-
-    LOG_DEBUG("Removing stack for thread ID: %d", threadId);
-    auto it = std::remove_if(
-        mappedStacks.begin(), mappedStacks.end(), [threadId](Stack* stack) { return stack->getStackId() == threadId; });
-    if (it != mappedStacks.end())
-    {
-        delete *it;
-        mappedStacks.erase(it, mappedStacks.end());
-        LOG_INFO("stack with ID: %d removed successfully", threadId);
-    }
-    else
-    {
-        LOG_ERROR("stack with ID: %d not found", threadId);
     }
 }
 
 void RTCore::suspend(uint16_t threadId)
 {
     LOG_INFO("Suspending thread with ID: %d", threadId);
-    auto it = std::remove_if(
+    auto it = std::find_if(
         activeStacks.begin(),
         activeStacks.end(),
         [threadId](Thread* thread) { return thread->getThreadId() == threadId; });
     if (it != activeStacks.end())
     {
-        activeStacks.erase(it, activeStacks.end());
+        activeStacks.erase(it);
         LOG_INFO("Thread with ID: %d suspended successfully", threadId);
     }
     else

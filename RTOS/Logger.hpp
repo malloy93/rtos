@@ -10,7 +10,7 @@ namespace core
 
 enum class LogLevel
 {
-    KERNEL = 0,
+    KERNEL = 0, 
     DEBUG = 1,
     INFO = 2,
     ERROR = 3,

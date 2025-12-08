@@ -2,8 +2,9 @@
 #include "main.hpp"
 #include <memory>
 #include <vector>
-#include "RTOS/Kernel.hpp"
+#include "RTOS/Core.hpp"
 #include "RTOS/Logger.hpp"
+#include "RTOS/SysApi.hpp"
 #include "gpio.hpp"
 #include "usart.h"
 
@@ -11,10 +12,6 @@ volatile uint32_t thread_switch_counter = 0;
 
 int x{0};
 volatile uint32_t counters[3];
-
-// core::Logger* logger;
-
-// core::RTCore* rtKernel;
 
 void SystemClock_Config(void);
 
@@ -28,11 +25,16 @@ void task2();
 void task4();
 void task5();
 
+core::RTCore* rtKernel;
+
 int main(void)
+
 {
     std::vector<void (*)()> threads;
     threads.push_back(task0);
     threads.push_back(task1);
+
+    // uint32_t pool2[24468];
     // threads.push_back(task2);
     // threads.push_back(task4);
     // threads.push_back(task5);
@@ -46,9 +48,8 @@ int main(void)
     core::Logger::init(&huart1, core::LogLevel::DEBUG);
     LOG_INFO("Logger initialized");
     utils::IdGen idGen;
-    // rtKernel = new kernel::RTCore(*logger, idGen);
     core::RTCore::init(idGen);
-    auto rtKernel = core::RTCore::getInstance();
+    rtKernel = core::RTCore::getInstance();
     rtKernel->addThreads(threads);
     rtKernel->launch(10u);
 
@@ -56,7 +57,6 @@ int main(void)
     {
     }
 
-    // delete rtKernel;
 }
 
 void SystemClock_Config(void)
@@ -116,6 +116,7 @@ void task0()
         counters[0]++;
     }
 }
+
 void task1()
 {
     bool isTriggered{false};
@@ -129,16 +130,16 @@ void task1()
         {
             removedCounter = thread_switch_counter;
             isTriggered = true;
-            core::removeTask(id);
-            // rtKernel->remove(id);
+            // core::removeTask(id);
+            rtKernel->remove(id);
         }
         if (thread_switch_counter > 200 and not isRemoved)
         {
             triggeredCounter = thread_switch_counter;
             isRemoved = true;
-            core::addTask(task0);
+            // core::addTask(task0);
             //
-            // id = rtKernel->add(task0);
+            id = rtKernel->add(task0);
         }
         if (thread_switch_counter - removedCounter > 300 and isTriggered)
         {
@@ -152,9 +153,11 @@ void task1()
         // LOG_INFO("Thread %d", 1);
         HAL_GPIO_TogglePin(greenLed_GPIO_Port, greenLed_Pin);
         HAL_Delay(500);
+        LOG_DEBUG("Thread 1");
         counters[1]++;
     }
 }
+
 void task2()
 {
     while (true)
@@ -165,6 +168,7 @@ void task2()
         counters[2]++;
     }
 }
+
 void task4()
 {
     while (true)
