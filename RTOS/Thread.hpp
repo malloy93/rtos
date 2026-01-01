@@ -32,6 +32,7 @@ struct Thread
     void logLocalInfo();
     void setStackPtr(uint32_t ptr) { startPtr = ptr; }
     void logSizeChange();
+    void calculateWagedPriority() { wagedPriority = (10 - priority) * (starvationCounter + 1); }
 
     const uint16_t& getThreadId() const { return threadId; }
 
@@ -45,18 +46,17 @@ struct Thread
         LOG_DEBUG("Stack ID: %d", allocatedStackId);
         return allocatedStackId;
     }
-
-private:
     uint32_t startPtr;
     void* threadArgs{nullptr};
 
     const uint16_t threadId{0};
     ThreadState state{ThreadState::READY};
 
-    uint8_t priority{0};
+    uint8_t priority{1};
     uint16_t starvationCounter{0};
     uint16_t wagedPriority{0};
     uint8_t minResourceSlice{1};
+    bool isAllocated{false};
 
     uint8_t allocatedStackId{invalidStackId};
 };

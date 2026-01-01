@@ -30,11 +30,12 @@ core::RTCore* rtKernel;
 int main(void)
 
 {
-    std::vector<void (*)()> threads;
-    threads.push_back(task0);
-    threads.push_back(task1);
+    SCnSCB->ACTLR |= SCnSCB_ACTLR_DISDEFWBUF_Msk;
+    // std::vector<void (*)()> threads;
+    // threads.push_back(task0);
+    // threads.push_back(task1);
 
-    // uint32_t pool2[24468];
+    // // uint32_t pool2[24468];
     // threads.push_back(task2);
     // threads.push_back(task4);
     // threads.push_back(task5);
@@ -50,13 +51,18 @@ int main(void)
     utils::IdGen idGen;
     core::RTCore::init(idGen);
     rtKernel = core::RTCore::getInstance();
-    rtKernel->addThreads(threads);
+    // rtKernel->addThreads(threads);
+    // rtKernel->addSystemThreads();
+    rtKernel->add(task0);
+    rtKernel->add(task1);
+    rtKernel->add(task2);
+    rtKernel->add(task4);
+    rtKernel->add(task5);
     rtKernel->launch(10u);
 
     while (1)
     {
     }
-
 }
 
 void SystemClock_Config(void)
@@ -131,7 +137,7 @@ void task1()
             removedCounter = thread_switch_counter;
             isTriggered = true;
             // core::removeTask(id);
-            rtKernel->remove(id);
+            // rtKernel->remove(id);
         }
         if (thread_switch_counter > 200 and not isRemoved)
         {

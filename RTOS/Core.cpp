@@ -3,6 +3,7 @@
 #include "Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f429xx.h"
 #include "Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f4xx.h"
 // #include "MemoryPool.hpp"
+#include "Configuration.hpp"
 #include "SysApi.hpp"
 
 // #include "Drivers/CMSIS/Include/cmsis_armcc.h"
@@ -15,6 +16,40 @@ extern core::RTCore* rtKernel;
 
 extern "C" void start_thread_switch();
 extern "C" void context_change();
+
+void idleTask()
+{
+    while (true)
+    {
+        __WFI(); // Wait For Interrupt - low power mode until next interrupt
+    }
+}
+
+void plannerTask()
+{
+    bool isTriggered{false};
+    while (true)
+    {
+        isTriggered = !isTriggered;
+        __WFI(); // Wait For Interrupt - low power mode until next interrupt
+    }
+}
+
+void loggerTask()
+{
+    while (true)
+    {
+        __WFI(); // Wait For Interrupt - low power mode until next interrupt
+    }
+}
+
+void configuratorTask()
+{
+    while (true)
+    {
+        __WFI(); // Wait For Interrupt - low power mode until next interrupt
+    }
+}
 
 namespace core
 {
@@ -46,9 +81,17 @@ void RTCore::createStack(uint16_t threadId)
     auto& threadStack = newstack.stackPointer;
     auto stackSize = static_cast<uint16_t>(newstack.size);
     LOG_DEBUG("Init Stack: %d, for thread: %d", stackId, threadId);
-    threadControlBlocks[threadId]->stackPtr = &threadStack[stackSize - 16];
+
+    auto thread = getThreadById(threadId);
+    if (thread == nullptr)
+    {
+        LOG_ERROR("Thread with ID: %d not found", threadId);
+        return;
+    }
+
+    thread->stackPtr = &threadStack[stackSize - 16];
     threadStack[stackSize - 1] = 0x01000000; // thumb xPSR
-    threadStack[stackSize - 2] = (uint32_t)(threadControlBlocks[threadId]->threadPointer);
+    threadStack[stackSize - 2] = (uint32_t)(thread->threadPointer);
     threadStack[stackSize - 3] = 0xFFFFFFFD; // LR to EXC_RETURN in Thread Mode
     threadStack[stackSize - 4] = 0x12121212; // R12
     threadStack[stackSize - 5] = 0x03030303; // R3
@@ -68,8 +111,8 @@ void RTCore::createStack(uint16_t threadId)
     // }
     // LOG_DEBUG("% 02X ", &threadStack[stackSize - 16]);
 
-    threadControlBlocks[threadId]->setStackPtr((uint32_t)&threadStack);
-    threadControlBlocks[threadId]->setStackId(stackId);
+    thread->setStackPtr((uint32_t)&threadStack);
+    thread->setStackId(stackId);
     // mappedStacks.push_back(stack);
 }
 
@@ -91,17 +134,16 @@ uint8_t RTCore::addThreads(std::vector<void (*)()>& threads)
     LOG_INFO("Adding threads.");
     for (std::size_t i = 0; i < numThreads; i++)
     {
-        createThread(threads.at(i));
-    }
-
-    for (std::size_t i = 0; i < numThreads; i++)
-    {
-        auto threadId = threadControlBlocks[i]->getThreadId();
+        auto threadId = createThread(threads.at(i));
         createStack(threadId);
     }
-    initializeScheduler();
 
-    logThreadInfo();
+    // for (std::size_t i = 0; i < numThreads; i++)
+    // {
+    //     auto threadId = threadControlBlocks[i]->getThreadId();
+    //     createStack(threadId);
+    // }
+
     return 1;
 }
 
@@ -110,7 +152,11 @@ void RTCore::initializeScheduler()
     for (const auto& thread : threadControlBlocks)
     {
         activeStacks.push_back(thread);
+        scheduler.addTask(thread);
     }
+    scheduler.allocateResourceList();
+    scheduler.printResourceAllocation();
+    // finishingThread = getNextThread();
     startingThread = getNextThread();
 }
 
@@ -136,6 +182,9 @@ void RTCore::logThreadInfo()
 
 void RTCore::launch(uint32_t quanta)
 {
+    initializeScheduler();
+
+    logThreadInfo();
     SysTick->CTRL = 0;
     SysTick->VAL = 0;
     SysTick->LOAD = (quanta * prescaler) - 1;

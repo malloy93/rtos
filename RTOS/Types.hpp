@@ -6,6 +6,7 @@ namespace core
 {
 constexpr int stackSize{500};
 constexpr uint8_t invalidStackId{255};
+constexpr uint8_t invalidThreadId{255};
 
 using threadId = uint8_t;
 using threadPriority = uint8_t;
@@ -23,7 +24,7 @@ enum : uint8_t
 
 };
 
-enum class ErrorCode : uint8_t
+enum class ErrorCodes : uint8_t
 {
     SUCCESS = 0,
     ERROR = 1,

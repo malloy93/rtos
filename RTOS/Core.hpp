@@ -8,6 +8,14 @@
 #include "Thread.hpp"
 #include "Utils.hpp"
 
+void idleTask();
+
+void plannerTask();
+
+void loggerTask();
+
+void configuratorTask();
+
 namespace core
 {
 // API CALLS
@@ -25,6 +33,17 @@ public:
     void launch(uint32_t);
 
     void logThreadInfo();
+    Thread* getThreadById(uint16_t id)
+    {
+        for (const auto& thread : threadControlBlocks)
+        {
+            if (thread->getThreadId() == id)
+            {
+                return thread;
+            }
+        }
+        return nullptr;
+    }
 
     uint16_t add(void (*)());
     void remove(uint16_t);
@@ -42,6 +61,15 @@ public:
                 return getNextThreadRoundRobin();
         }
     }
+    void addSystemThreads()
+    {
+        add(idleTask);
+        add(plannerTask);
+        add(loggerTask);
+        add(configuratorTask);
+
+        idGen.setId(10);
+    }
 
 private:
     MemoryPool memoryPool;
@@ -57,6 +85,8 @@ private:
 
         memoryPool.createPool();
         LOG_INFO("Memory pool initialized");
+        threadControlBlocks.reserve(20);
+        addSystemThreads();
     }
 
     utils::IdGen& idGen;
@@ -65,7 +95,7 @@ private:
     std::vector<Thread*> threadControlBlocks; // change to unordered_map [threadId, tcb] or not // no this is dumb
     SchedulerType schedulerType{SchedulerType::ROUND_ROBIN};
     std::vector<Thread*> activeStacks;
-    std::vector<Stack*> mappedStacks;
+    // std::vector<Stack*> mappedStacks;
     uint8_t currentStackIndex{0};
 
     Thread* getNextThreadRoundRobin();

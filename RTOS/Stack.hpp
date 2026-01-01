@@ -40,16 +40,6 @@ struct Stack
 class MemoryPool
 {
 public:
-    void fillPool(auto& pool, StackSize size, uint32_t*& currentAddress)
-    {
-        pool.endAddress = currentAddress;
-        pool.baseAddress = currentAddress + static_cast<uint32_t>(size); // za duzy o 1
-        pool.stackPointer = currentAddress;
-        pool.canaryOffset = 1;
-        pool.size = size;
-        *(pool.endAddress + 1) = freeCanaryValue;
-        currentAddress += static_cast<uint32_t>(size);
-    }
     void createPool()
     {
         uint32_t* currentAddress = pool;
@@ -119,6 +109,18 @@ public:
         return true;
     }
 
+private:
+    void fillPool(auto& pool, StackSize size, uint32_t*& currentAddress)
+    {
+        pool.endAddress = currentAddress;
+        pool.baseAddress = currentAddress + static_cast<uint32_t>(size); // za duzy o 1
+        pool.stackPointer = currentAddress;
+        pool.canaryOffset = 1;
+        pool.size = size;
+        *(pool.endAddress + 1) = freeCanaryValue;
+        currentAddress += static_cast<uint32_t>(size);
+    }
+
     void zeroStackMemory(StackId id)
     {
         LOG_DEBUG("Zeroing stack memory for stack ID: %d", id);
@@ -138,10 +140,11 @@ public:
         LOG_DEBUG("Stack memory zeroed for stack ID: %d", id);
     }
 
-private:
     constexpr static MemConfig config{};
     Stack totalPools[45];
     uint32_t pool[config.poolSize] = {0}; // size in kB (96kB)
+    bool isCCRAM{false};
+    bool isSDRAM{false};
 };
 
 } // namespace core

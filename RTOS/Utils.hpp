@@ -14,20 +14,18 @@ class IdGen
 {
 public:
     IdGen() = default;
+    IdGen(uint16_t id) : genId{id} {}
+    void setId(uint16_t id) { genId = id; }
 
     uint16_t getId()
     {
-        if (genId == maxId)
-            genId = 0;
+        if (genId == maxId) genId = 0;
         return genId++;
     }
 
 private:
     uint16_t genId{0};
 };
-
-
-
 
 // template <typename T>
 // class Map
@@ -80,6 +78,5 @@ private:
 //     std::vector<std::pair<uint16_t, T>> data;
 
 // };
-
 
 } // namespace utils
