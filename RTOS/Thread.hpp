@@ -18,14 +18,14 @@ struct Thread
     Thread* nextPtr;
     void (*threadPointer)(void);
 
-    Thread* getNextPtr()
-    {
-        // logSizeChange();
-        // logLocalInfo();
-        // nextPtr->logLocalInfo();
-        // LOG_DEBUG("  ");
-        return nextPtr;
-    }
+    // Thread* getNextPtr()
+    // {
+    //     // logSizeChange();
+    //     // logLocalInfo();
+    //     // nextPtr->logLocalInfo();
+    //     // LOG_DEBUG("  ");
+    //     return nextPtr;
+    // }
 
     const char* printThreadInfo();
 

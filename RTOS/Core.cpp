@@ -17,40 +17,6 @@ extern core::RTCore* rtKernel;
 extern "C" void start_thread_switch();
 extern "C" void context_change();
 
-void idleTask()
-{
-    while (true)
-    {
-        __WFI(); // Wait For Interrupt - low power mode until next interrupt
-    }
-}
-
-void plannerTask()
-{
-    bool isTriggered{false};
-    while (true)
-    {
-        isTriggered = !isTriggered;
-        __WFI(); // Wait For Interrupt - low power mode until next interrupt
-    }
-}
-
-void loggerTask()
-{
-    while (true)
-    {
-        __WFI(); // Wait For Interrupt - low power mode until next interrupt
-    }
-}
-
-void configuratorTask()
-{
-    while (true)
-    {
-        __WFI(); // Wait For Interrupt - low power mode until next interrupt
-    }
-}
-
 namespace core
 {
 
@@ -70,7 +36,7 @@ RTCore* RTCore::getInstance()
 void RTCore::createStack(uint16_t threadId)
 {
     // Stack* stack = new Stack{threadId};
-    auto stackId = memoryPool.allocateStack(StackSize::SIZE_1kB);
+    auto stackId = memoryPool.allocateStack(StackSize::SIZE_2kB);
     if (stackId == invalidStackId)
     {
         LOG_ERROR("Failed to allocate stack for thread ID: %d", threadId);
@@ -167,6 +133,7 @@ Thread* RTCore::getNextThreadRoundRobin()
         currentStackIndex = 0;
     }
     auto nextThread = activeStacks[currentStackIndex];
+    // LOG_INFO("Next thread ID: %d", nextThread->getThreadId());
     currentStackIndex++;
     return nextThread;
 }
@@ -187,7 +154,7 @@ void RTCore::launch(uint32_t quanta)
     logThreadInfo();
     SysTick->CTRL = 0;
     SysTick->VAL = 0;
-    SysTick->LOAD = (quanta * prescaler) - 1;
+    SysTick->LOAD = (sliceTime * systickPrescaler) - 1;
     SYSPRI3 = (SYSPRI3 & 0x00FFFFFF) | 0xE0000000;
 
     SysTick->CTRL = 0x00000007;

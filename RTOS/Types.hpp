@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdint.h>
+
 #define SYSPRI3 (*((volatile uint32_t*)0xE000ED20))
 #define INTCTRL (*((volatile uint32_t*)0xE000ED04))
 namespace core

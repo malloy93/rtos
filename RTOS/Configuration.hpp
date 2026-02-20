@@ -14,3 +14,4 @@ constexpr static MCUConfig f411reConfig{128, 0, 0};
 constexpr static MCUConfig l476rgConfig{96, 16, 0};
 constexpr static MCUConfig h743ziConfig{512, 128, 64};
 } // namespace configuration
+ 

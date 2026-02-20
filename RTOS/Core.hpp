@@ -3,18 +3,12 @@
 #include <stdint.h>
 #include <vector>
 #include "Logger.hpp"
+#include "MemoryPool.hpp"
+#include "RTOS/CircularBuffer.hpp"
 #include "Scheduler.hpp"
-#include "Stack.hpp"
+#include "SysTasks.hpp"
 #include "Thread.hpp"
 #include "Utils.hpp"
-
-void idleTask();
-
-void plannerTask();
-
-void loggerTask();
-
-void configuratorTask();
 
 namespace core
 {
@@ -48,6 +42,12 @@ public:
     uint16_t add(void (*)());
     void remove(uint16_t);
     void suspend(uint16_t);
+    void runAllocator()
+    {
+        scheduler.allocateResourceList();
+        // scheduler.printResourceAllocation();
+    }
+    void pushLog(std::span<char> data) { loggerBuffer.push(data); }
 
     Thread* getNextThread()
     {
@@ -63,17 +63,23 @@ public:
     }
     void addSystemThreads()
     {
-        add(idleTask);
-        add(plannerTask);
-        add(loggerTask);
-        add(configuratorTask);
+        add(sysTasks::idleTask);
+        add(sysTasks::eventTracerTask);
+        add(sysTasks::resourceAllocatorTask);
+        add(sysTasks::resourceUpdateTask);
+        add(sysTasks::systemReconfigurationTask);
 
         idGen.setId(10);
     }
 
+    void changeSliceTime(uint8_t newSliceTime) { sliceTime = newSliceTime; }
+
+    void setSchedulerType(SchedulerType type) { schedulerType = type; }
+
 private:
     MemoryPool memoryPool;
     Scheduler scheduler;
+    CircularBuffer loggerBuffer;
     void initializeScheduler();
     uint16_t createThread(void (*)());
     void createStack(uint16_t);
@@ -81,8 +87,9 @@ private:
     RTCore(utils::IdGen& idGen) : idGen{idGen}
     {
         LOG_INFO("Initializing core");
-        prescaler = utils::getClockFreq() / 1000;
-
+        systickPrescaler = utils::getClockFreq() / 1000;
+        LOG_INFO("System clock frequency: %d Hz", utils::getClockFreq());
+        LOG_INFO("Prescaler: %d", systickPrescaler);
         memoryPool.createPool();
         LOG_INFO("Memory pool initialized");
         threadControlBlocks.reserve(20);
@@ -91,7 +98,7 @@ private:
 
     utils::IdGen& idGen;
 
-    uint32_t prescaler{};
+    uint32_t systickPrescaler{};
     std::vector<Thread*> threadControlBlocks; // change to unordered_map [threadId, tcb] or not // no this is dumb
     SchedulerType schedulerType{SchedulerType::ROUND_ROBIN};
     std::vector<Thread*> activeStacks;
@@ -105,6 +112,7 @@ private:
         return nullptr; // Placeholder
     }
     inline static RTCore* kernelInstance = nullptr;
+    uint8_t sliceTime{5};
 };
 
 } // namespace core

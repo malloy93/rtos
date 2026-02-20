@@ -1,71 +1,55 @@
 #pragma once
+#include <atomic>
 #include <cstdint>
-#include <cstring>
+#include <span>
 
-namespace core
-{
+constexpr size_t CIRCULAR_BUFFER_SIZE = 4096;
 
-template <uint16_t BufferSize>
 class CircularBuffer
 {
 public:
-    CircularBuffer() : head{0}, tail{0}, count{0} {}
+    CircularBuffer() = default;
 
-    // dodaj element na koniec
-    bool push(uint8_t value)
+    bool push(std::span<char> data)
     {
-        if (isFull()) return false;
-
-        buffer[tail] = value;
-        tail = (tail + 1) % BufferSize;
-        ++count;
+        // mutex here
+        for (auto byte : data)
+        {
+            size_t next_head = (head + 1) % CIRCULAR_BUFFER_SIZE;
+            if (next_head == tail)
+            {
+                return false;
+            }
+            buffer[head] = static_cast<uint8_t>(byte);
+            head = next_head;
+        }
         return true;
     }
 
-    // pobierz element z przodu
-    bool pop(uint8_t& value)
+    bool isEmpty() const { return head == tail; }
+
+    uint8_t* getReadPtr() { return &buffer[tail]; }
+
+    size_t getLinearBlockSize()
     {
-        if (isEmpty()) return false;
+        size_t h = head;
+        size_t t = tail;
 
-        value = buffer[head];
-        head = (head + 1) % BufferSize;
-        --count;
-        return true;
+        if (h == t) return 0;
+
+        if (h > t)
+        {
+            return h - t;
+        }
+        else
+        {
+            return CIRCULAR_BUFFER_SIZE - t;
+        }
     }
-
-    // podejrzyj element z przodu bez usuwania
-    bool peek(uint8_t& value) const
-    {
-        if (isEmpty()) return false;
-        value = buffer[head];
-        return true;
-    }
-
-    // czy bufor jest pusty
-    bool isEmpty() const { return count == 0; }
-
-    // czy bufor jest pełny
-    bool isFull() const { return count == BufferSize; }
-
-    // liczba elementów w buforze
-    uint16_t size() const { return count; }
-
-    // pojemność buforu
-    uint16_t capacity() const { return BufferSize; }
-
-    // wyczyść bufor
-    void clear()
-    {
-        head = 0;
-        tail = 0;
-        count = 0;
-    }
+    void advanceTail(size_t amount) { tail = (tail + amount) % CIRCULAR_BUFFER_SIZE; }
 
 private:
-    uint8_t buffer[BufferSize];
-    uint16_t head;   // indeks do odczytu
-    uint16_t tail;   // indeks do zapisu
-    uint16_t count;  // liczba elementów w buforze
+    uint8_t buffer[CIRCULAR_BUFFER_SIZE] = {0};
+    volatile size_t head{0};
+    volatile size_t tail{0};
 };
-
-} // namespace core

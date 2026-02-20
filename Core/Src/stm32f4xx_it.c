@@ -42,6 +42,7 @@
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
 extern UART_HandleTypeDef huart1;
+extern DMA_HandleTypeDef hdma_usart1_tx;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -85,12 +86,12 @@ void NMI_Handler(void)
 void HardFault_Handler(void)
 {
     /* USER CODE BEGIN HardFault_IRQn 0 */
-    volatile uint32_t cfsr = SCB->CFSR; // Rejestr statusowy Fault Status
-    volatile uint32_t hfsr = SCB->HFSR; // Rejestr statusowy HardFault
+    volatile uint32_t cfsr = SCB->CFSR;  // Rejestr statusowy Fault Status
+    volatile uint32_t hfsr = SCB->HFSR;  // Rejestr statusowy HardFault
     volatile uint32_t mmar = SCB->MMFAR; // Rejestr adresu błędu zarządzania pamięcią
-    volatile uint32_t bfar = SCB->BFAR; // Rejestr adresu błędu busa
+    volatile uint32_t bfar = SCB->BFAR;  // Rejestr adresu błędu busa
 
-     while (1)
+    while (1)
     {
         // Zatrzymaj tutaj, aby debugować
     }
@@ -238,6 +239,10 @@ void TIM7_IRQHandler(void)
     /* USER CODE BEGIN TIM7_IRQn 1 */
 
     /* USER CODE END TIM7_IRQn 1 */
+}
+void DMA2_Stream7_IRQHandler(void)
+{
+  HAL_DMA_IRQHandler(&hdma_usart1_tx);
 }
 
 /* USER CODE BEGIN 1 */

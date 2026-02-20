@@ -5,7 +5,7 @@
 
 namespace core
 {
-
+// CircularBuffer Logger::logBuffer;
 // void Logger::sendMessage(const char* msg)
 // {
 //     char buffer[256];

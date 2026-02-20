@@ -3,19 +3,22 @@
 #include <cstdarg>
 #include <cstdio>
 #include <cstring>
+#include "CircularBuffer.hpp"
 #include "Core/Inc/usart.h"
-
+#include "Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f4xx.h"
 namespace core
 {
 
 enum class LogLevel
 {
-    KERNEL = 0, 
+    KERNEL = 0,
     DEBUG = 1,
     INFO = 2,
     ERROR = 3,
     OFF = 4
 };
+
+// class RTCore;
 
 class Logger
 {
@@ -28,69 +31,94 @@ public:
         }
     }
     static Logger* getInstance() { return loggerInstance; }
-
     void log(LogLevel msgLevel, const char* fmt, ...)
     {
         if (!comPort) return;
-        if (msgLevel == LogLevel::OFF || logLevel == LogLevel::OFF) return;
-        // filtr jak w oryginale: przepuszczamy gdy msgLevel >= level_
+        if (logLevel == LogLevel::OFF) return;
+
+        // Filtr poziomu logowania
         if ((uint8_t)msgLevel < (uint8_t)logLevel) return;
 
-        const char* tag = "";
-        switch (msgLevel)
-        {
-            case LogLevel::KERNEL:
-                tag = "KRL: ";
-                break;
-            case LogLevel::DEBUG:
-                tag = "DBG: ";
-                break;
-            case LogLevel::INFO:
-                tag = "INF: ";
-                break;
-            case LogLevel::ERROR:
-                tag = "ERR: ";
-                break;
-            default:
-                break;
-        }
+        // --- USUNIĘTA SEKCJA SWITCH I TAGI ---
 
-        char buf[256];
-        int off = snprintf(buf, sizeof(buf), "%s", tag);
+        // 2. Bufor na stosie
+        char buf[128];
 
+        // 3. Formatowanie samej wiadomości (bez offsetu)
         va_list ap;
         va_start(ap, fmt);
-        int n = vsnprintf(buf + off, sizeof(buf) - off, fmt, ap);
+        // Piszemy od początku bufora (buf), używając całej jego wielkości
+        int n = vsnprintf(buf, sizeof(buf), fmt, ap);
         va_end(ap);
+
+        // 4. Obsługa długości i dodawanie nowej linii
         if (n < 0) n = 0;
-        size_t used = static_cast<size_t>(off + (n >= 0 ? n : 0));
-        if (used + 2 <= sizeof(buf))
+        size_t used = static_cast<size_t>(n);
+
+        // Zabezpieczenie przed przepełnieniem przy dodawaniu \r\n
+        // Musimy mieć miejsce na co najmniej 2 znaki (\r\n) + ewentualne 0
+        if (used >= sizeof(buf) - 2)
         {
-            buf[used++] = '\r';
-            buf[used++] = '\n';
-        }
-        else if (used < sizeof(buf))
-        {
-            buf[used++] = '\n';
+            used = sizeof(buf) - 3; // Przycinamy wiadomość, żeby zmieścić \r\n
         }
 
-        HAL_UART_Transmit(comPort, reinterpret_cast<const uint8_t*>(buf), static_cast<uint16_t>(used), HAL_MAX_DELAY);
+        buf[used++] = '\r';
+        buf[used++] = '\n';
+
+        logBuffer.push(std::span<char>(buf, used));
+        // HAL_UART_Transmit(comPort, reinterpret_cast<const uint8_t*>(buf), static_cast<uint16_t>(used), 5);
+    }
+
+    void send()
+    {
+        // 1. Sprawdź, czy UART jest wolny (czy poprzednie DMA skończyło)
+        // gState to flaga HAL-a zarządzająca nadawaniem
+        if (comPort->gState != HAL_UART_STATE_READY)
+        {
+            return; // Poprzednia paczka jeszcze leci, wrócimy tu za chwilę
+        }
+
+        // 2. Sprawdź, czy mamy nowe dane w buforze
+        if (logBuffer.isEmpty())
+        {
+            return;
+        }
+
+        // 3. Pobierz parametry dla DMA
+        // To "magia", która obsługuje bufor kołowy w dwóch rzutach
+        size_t len = logBuffer.getLinearBlockSize();
+        uint8_t* ptr = logBuffer.getReadPtr();
+
+        // 4. Odpal DMA
+        if (len > 0)
+        {
+            // To wywołanie nie blokuje CPU!
+            // DMA zaczyna słać w tle.
+            if (HAL_UART_Transmit_DMA(comPort, ptr, (uint16_t)len) == HAL_OK)
+            {
+                // 5. Zakładamy sukces i przesuwamy ogon
+                // (W idealnym świecie robimy to w callbacku, ale w prostym loggerze
+                //  można "zaliczyć" dane jako wysłane w momencie zlecenia).
+                logBuffer.advanceTail(len);
+            }
+        }
     }
 
 private:
     UART_HandleTypeDef* comPort{nullptr};
     LogLevel logLevel;
     inline static Logger* loggerInstance = nullptr;
+    CircularBuffer logBuffer;
 
     Logger(UART_HandleTypeDef* uart, LogLevel logLevel) : comPort(uart), logLevel(logLevel)
     {
         constexpr const char* startMsg = "\r\n \r\n RRTOS ver. 0.4 \r\n";
-        HAL_UART_Transmit(comPort, reinterpret_cast<const uint8_t*>(startMsg), 24, HAL_MAX_DELAY);
+        HAL_UART_Transmit(comPort, reinterpret_cast<const uint8_t*>(startMsg), 24, 50);
     }
 
     void sendMessage(const char* buffer)
     {
-        HAL_UART_Transmit(comPort, reinterpret_cast<const uint8_t*>(buffer), strlen(buffer), HAL_MAX_DELAY);
+        HAL_UART_Transmit(comPort, reinterpret_cast<const uint8_t*>(buffer), strlen(buffer), 50);
     }
 };
 } // namespace core

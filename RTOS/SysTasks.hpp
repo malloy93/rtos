@@ -1,6 +1,6 @@
 #pragma once
 
-namespace coreTasks
+namespace sysTasks
 {
 
 void idleTask();
@@ -10,4 +10,4 @@ void eventTracerTask();
 void resourceAllocatorTask();
 void resourceUpdateTask();
 
-} // namespace coreTasks
+} // namespace sysTasks

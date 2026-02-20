@@ -95,21 +95,67 @@ public:
     void printResourceAllocation()
     {
         std::span<Resource> currentList = getCurrentResourceList();
-        for (size_t i = 0; i < currentList.size(); ++i)
+        char lineBuffer[128];
+        int offset = 0;
+
+        // LOG_INFO("--- Resource Map ---");
+        // for (int i = 0; i < 50; i++)
+        // {
+        //     // Format: "ID:Właściciel " np "00:01 "
+        //     offset += snprintf(
+        //         lineBuffer + offset, sizeof(lineBuffer) - offset, "%02d:%02d ", i,
+        //         currentList[i].owner->getThreadId());
+
+        //     // Co 10 element wypluj linię i wyczyść bufor
+        //     if ((i + 1) % 10 == 0)
+        //     {
+        //         LOG_INFO(lineBuffer);
+        //         offset = 0;
+        //         lineBuffer[0] = '\0';
+        //     }
+        // }
+
+        LOG_INFO("--- Resource Map ---");
+
+        for (int i = 0; i < 50; i++)
         {
-            if (currentList[i].owner != nullptr)
+            // 1. Jeśli to początek nowej linii (0, 10, 20...), wpisz nagłówek do bufora
+            if (i % 10 == 0)
             {
-                LOG_INFO(
-                    "Resource Slot %d: Owned by Thread ID %d with Slot Occupancy %d",
-                    i,
-                    currentList[i].owner->getThreadId(),
-                    currentList[i].slotOccupancy);
+                offset += snprintf(lineBuffer + offset, sizeof(lineBuffer) - offset, "Slots %02d-%02d: ", i, i + 9);
             }
-            else
+
+            // 2. Format danych z NAWIASAMI: "[ID:Właściciel] "
+            offset += snprintf(
+                lineBuffer + offset,
+                sizeof(lineBuffer) - offset,
+                "[%02d:%02d] ",
+                i,
+                currentList[i].owner->getThreadId());
+
+            // 3. Co 10 element (lub na końcu listy) wypluj linię i wyczyść
+            if ((i + 1) % 10 == 0)
             {
-                LOG_INFO("Resource Slot %d: Unallocated", i);
+                LOG_INFO("%s", lineBuffer); // Użyj "%s" dla bezpieczeństwa
+                offset = 0;
+                lineBuffer[0] = '\0';
             }
         }
+        // for (size_t i = 0; i < currentList.size(); ++i)
+        // {
+        //     if (currentList[i].owner != nullptr)
+        //     {
+        //         LOG_INFO(
+        //             "Resource Slot %d: Owned by Thread ID %d with Slot Occupancy %d",
+        //             i,
+        //             currentList[i].owner->getThreadId(),
+        //             currentList[i].slotOccupancy);
+        //     }
+        //     else
+        //     {
+        //         LOG_INFO("Resource Slot %d: Unallocated", i);
+        //     }
+        // }
     }
 
 private:
