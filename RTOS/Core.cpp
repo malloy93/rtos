@@ -1,7 +1,9 @@
 #include "Core.hpp"
 #include <algorithm>
+#ifndef RTOS_HOST_TEST
 #include "Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f429xx.h"
 #include "Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f4xx.h"
+#endif
 // #include "MemoryPool.hpp"
 #include "Configuration.hpp"
 #include "SysApi.hpp"
@@ -57,7 +59,11 @@ void RTCore::createStack(uint16_t threadId)
 
     thread->stackPtr = &threadStack[stackSize - 16];
     threadStack[stackSize - 1] = 0x01000000; // thumb xPSR
-    threadStack[stackSize - 2] = (uint32_t)(thread->threadPointer);
+#ifdef RTOS_HOST_TEST
+    threadStack[stackSize - 2] = 0;
+#else
+    threadStack[stackSize - 2] = reinterpret_cast<uint32_t>(thread->threadPointer);
+#endif
     threadStack[stackSize - 3] = 0xFFFFFFFD; // LR to EXC_RETURN in Thread Mode
     threadStack[stackSize - 4] = 0x12121212; // R12
     threadStack[stackSize - 5] = 0x03030303; // R3
@@ -77,15 +83,19 @@ void RTCore::createStack(uint16_t threadId)
     // }
     // LOG_DEBUG("% 02X ", &threadStack[stackSize - 16]);
 
-    thread->setStackPtr((uint32_t)&threadStack);
+#ifdef RTOS_HOST_TEST
+    thread->setStackPtr(0);
+#else
+    thread->setStackPtr(reinterpret_cast<uint32_t>(&threadStack));
+#endif
     thread->setStackId(stackId);
     // mappedStacks.push_back(stack);
 }
 
-uint16_t RTCore::createThread(void (*threadPointer)())
+uint16_t RTCore::createThread(void (*threadPointer)(), TaskType type)
 {
     auto threadId = idGen.getId();
-    Thread* thread = new Thread{threadPointer, threadId};
+    Thread* thread = new Thread{threadPointer, threadId, type};
     LOG_DEBUG("Thread created with ID: %d", threadId);
     thread->logLocalInfo();
 
@@ -100,7 +110,7 @@ uint8_t RTCore::addThreads(std::vector<void (*)()>& threads)
     LOG_INFO("Adding threads.");
     for (std::size_t i = 0; i < numThreads; i++)
     {
-        auto threadId = createThread(threads.at(i));
+        auto threadId = createThread(threads.at(i), TaskType::NORMAL);
         createStack(threadId);
     }
 
@@ -143,12 +153,17 @@ void RTCore::logThreadInfo()
     for (const auto& thread : threadControlBlocks)
     {
         auto newBuffer = thread->printThreadInfo();
-        LOG_DEBUG(newBuffer);
+        LOG_DEBUG("%s", newBuffer);
     }
 }
 
 void RTCore::launch(uint32_t quanta)
 {
+#ifdef RTOS_HOST_TEST
+    (void)quanta;
+    initializeScheduler();
+    logThreadInfo();
+#else
     initializeScheduler();
 
     logThreadInfo();
@@ -160,6 +175,7 @@ void RTCore::launch(uint32_t quanta)
     SysTick->CTRL = 0x00000007;
     LOG_INFO("Launching scheduler");
     start_thread_switch();
+#endif
 }
 
 void RTCore::remove(uint16_t threadId)
@@ -200,9 +216,10 @@ void RTCore::suspend(uint16_t threadId)
     }
 }
 
-uint16_t RTCore::add(void (*threadPointer)())
+uint16_t RTCore::add(void (*threadPointer)(), TaskType type)
 {
-    auto threadId = createThread(threadPointer);
+    auto threadId = createThread(threadPointer, type);
+
     createStack(threadId);
     activeStacks.push_back(threadControlBlocks.back());
     LOG_INFO("Thread with ID: %d added successfully", threadId);
@@ -237,6 +254,7 @@ extern "C" void changeContext()
 // dec - jan - mutex + semaphores + queues
 // feb - mar - sys reconfig
 
+#ifndef RTOS_HOST_TEST
 extern "C" __attribute__((naked)) void SVC_Handler(void)
 {
     __asm volatile(
@@ -287,3 +305,4 @@ extern "C" void SVC_Handler_C(uint32_t* stacked)
             break;
     }
 }
+#endif

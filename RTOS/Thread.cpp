@@ -28,7 +28,7 @@ const char* Thread::printThreadInfo()
 void Thread::logLocalInfo()
 {
     auto newBuffer = printThreadInfo();
-    LOG_DEBUG(newBuffer);
+    LOG_DEBUG("%s", newBuffer);
     // LOG_DEBUG(oss.str());
 }
 
@@ -36,11 +36,11 @@ void Thread::logSizeChange()
 {
     // if (threadId == 0)
     // {
-    auto remainingStackSize = (uint32_t)stackPtr - startPtr;
-    LOG_DEBUG("Thread: ", threadId);
+    auto remainingStackSize = reinterpret_cast<uintptr_t>(stackPtr) - static_cast<uintptr_t>(startPtr);
+    LOG_DEBUG("Thread: %d", threadId);
     // LOG_DEBUG("Start stack size: ", startPtr);
     // LOG_DEBUG("Current stack size: ", (uint32_t)stackPtr);
-    LOG_DEBUG("Used stack size: ", remainingStackSize);
+    LOG_DEBUG("Used stack size: %lu", static_cast<unsigned long>(remainingStackSize));
     // }
 }
 

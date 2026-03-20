@@ -26,6 +26,13 @@ enum : uint8_t
 
 };
 
+enum class TaskType : uint8_t
+{
+    SYSTEM,
+    HARD_RT,
+    NORMAL
+};
+
 enum class ErrorCodes : uint8_t
 {
     SUCCESS = 0,

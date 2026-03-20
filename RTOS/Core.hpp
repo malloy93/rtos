@@ -39,7 +39,7 @@ public:
         return nullptr;
     }
 
-    uint16_t add(void (*)());
+    uint16_t add(void (*)(), TaskType type = TaskType::NORMAL);
     void remove(uint16_t);
     void suspend(uint16_t);
     void runAllocator()
@@ -63,11 +63,11 @@ public:
     }
     void addSystemThreads()
     {
-        add(sysTasks::idleTask);
-        add(sysTasks::eventTracerTask);
-        add(sysTasks::resourceAllocatorTask);
-        add(sysTasks::resourceUpdateTask);
-        add(sysTasks::systemReconfigurationTask);
+        add(sysTasks::idleTask, TaskType::SYSTEM);
+        add(sysTasks::resourceAllocatorTask, TaskType::SYSTEM);
+        add(sysTasks::eventTracerTask, TaskType::SYSTEM);
+        add(sysTasks::resourceUpdateTask, TaskType::SYSTEM);
+        add(sysTasks::systemReconfigurationTask, TaskType::SYSTEM);
 
         idGen.setId(10);
     }
@@ -81,7 +81,7 @@ private:
     Scheduler scheduler;
     CircularBuffer loggerBuffer;
     void initializeScheduler();
-    uint16_t createThread(void (*)());
+    uint16_t createThread(void (*)(), TaskType type);
     void createStack(uint16_t);
 
     RTCore(utils::IdGen& idGen) : idGen{idGen}

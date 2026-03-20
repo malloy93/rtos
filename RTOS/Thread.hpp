@@ -8,14 +8,18 @@
 
 namespace core
 {
+
+
 class Logger;
 struct Thread
 {
     Thread() = default;
-    Thread(void (*threadPointer)(void) &) : threadPointer{threadPointer} {}
-    Thread(void (*threadPointer)(void) &, uint16_t threadId) : threadPointer{threadPointer}, threadId{threadId} {}
-    uint32_t* stackPtr;
-    Thread* nextPtr;
+    Thread(void (*threadPointer)(void), uint16_t threadId, TaskType taskType = TaskType::NORMAL)
+        : threadPointer{threadPointer}, threadId{threadId}, taskType{taskType}
+    {
+    }
+    uint32_t* stackPtr{nullptr};
+    Thread* nextPtr{nullptr};
     void (*threadPointer)(void);
 
     // Thread* getNextPtr()
@@ -50,6 +54,7 @@ struct Thread
     void* threadArgs{nullptr};
 
     const uint16_t threadId{0};
+    TaskType taskType{TaskType::NORMAL};
     ThreadState state{ThreadState::READY};
 
     uint8_t priority{1};

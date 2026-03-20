@@ -20,7 +20,21 @@ class Scheduler
 public:
     Scheduler() = default;
 
-    void addTask(Thread* thread) { activeTasks.push_back(thread); }
+    void addTask(Thread* thread)
+    {
+        switch (thread->taskType)
+        {
+            case TaskType::SYSTEM:
+                systemTasks.push_back(thread);
+                break;
+            case TaskType::HARD_RT:
+                hardRtTasks.push_back(thread);
+                break;
+            case TaskType::NORMAL:
+                activeTasks.push_back(thread);
+                break;
+        }
+    }
     void removeTask();
 
     Thread* getNextThread()
@@ -50,15 +64,16 @@ public:
         for (uint8_t i = 0; i < 5; ++i)
         {
             uint8_t currentSliceOccupancy = 0;
-            uint8_t startIdx = idx;
+            uint8_t startIdx = i * 10; // Make startIdx slice-aware
 
-            // clearNextResourceList()
+            // clearNextResourceList() for the 9 normal slots
             for (uint8_t k = 0; k < systemTaskSlot; ++k)
             {
                 nextResourceList[startIdx + k].owner = nullptr;
                 nextResourceList[startIdx + k].slotOccupancy = 0;
             }
 
+            idx = startIdx; // Start allocation at the beginning of the slice.
             for (uint8_t j = 0; j < systemTaskSlot; ++j)
             {
                 findBestTask(nextResourceList, currentSliceOccupancy, idx);
@@ -67,20 +82,30 @@ public:
                     break;
                 }
             }
+
+            // Add system task to the end of the slice
+            if (i < systemTasks.size())
+            {
+                nextResourceList[startIdx + 9].owner = systemTasks[i];
+                nextResourceList[startIdx + 9].slotOccupancy = 1;
+            }
+
             clearAllocatedFlags();
             if (currentSliceOccupancy < systemTaskSlot)
             {
-                startIdx = idx;
-                uint8_t endIdx = (i * 10) + systemTaskSlot;
+                uint8_t endIdx = startIdx + systemTaskSlot;
                 // Iterate over the slice again to fill holes
                 for (uint8_t k = startIdx; k < endIdx; ++k)
                 {
                     if (nextResourceList[k].owner == nullptr)
                     {
-                        findBestTask(nextResourceList, currentSliceOccupancy, idx, false);
+                        uint8_t temp_idx = k;
+                        findBestTask(nextResourceList, currentSliceOccupancy, temp_idx, false);
                     }
                 }
             }
+
+            printResourceAllocation();
         }
         return true;
     }
@@ -98,27 +123,29 @@ public:
         char lineBuffer[128];
         int offset = 0;
 
-        // LOG_INFO("--- Resource Map ---");
-        // for (int i = 0; i < 50; i++)
-        // {
-        //     // Format: "ID:Właściciel " np "00:01 "
-        //     offset += snprintf(
-        //         lineBuffer + offset, sizeof(lineBuffer) - offset, "%02d:%02d ", i,
-        //         currentList[i].owner->getThreadId());
+        LOG_INFO("--- Resource Map ---");
+        for (int i = 0; i < 50; i++)
+        {
+            uint16_t ownerId =
+                (currentList[i].owner != nullptr) ? currentList[i].owner->getThreadId() : invalidThreadId;
+            // Format: "ID:Właściciel " np "00:01 "
+            offset += snprintf(lineBuffer + offset, sizeof(lineBuffer) - offset, "%02d:%02d ", i, ownerId);
 
-        //     // Co 10 element wypluj linię i wyczyść bufor
-        //     if ((i + 1) % 10 == 0)
-        //     {
-        //         LOG_INFO(lineBuffer);
-        //         offset = 0;
-        //         lineBuffer[0] = '\0';
-        //     }
-        // }
+            // Co 10 element wypluj linię i wyczyść bufor
+            if ((i + 1) % 10 == 0)
+            {
+                LOG_INFO("%s", lineBuffer);
+                offset = 0;
+                lineBuffer[0] = '\0';
+            }
+        }
 
         LOG_INFO("--- Resource Map ---");
 
         for (int i = 0; i < 50; i++)
         {
+            uint16_t ownerId =
+                (currentList[i].owner != nullptr) ? currentList[i].owner->getThreadId() : invalidThreadId;
             // 1. Jeśli to początek nowej linii (0, 10, 20...), wpisz nagłówek do bufora
             if (i % 10 == 0)
             {
@@ -126,12 +153,7 @@ public:
             }
 
             // 2. Format danych z NAWIASAMI: "[ID:Właściciel] "
-            offset += snprintf(
-                lineBuffer + offset,
-                sizeof(lineBuffer) - offset,
-                "[%02d:%02d] ",
-                i,
-                currentList[i].owner->getThreadId());
+            offset += snprintf(lineBuffer + offset, sizeof(lineBuffer) - offset, "[%02d:%02d] ", i, ownerId);
 
             // 3. Co 10 element (lub na końcu listy) wypluj linię i wyczyść
             if ((i + 1) % 10 == 0)
@@ -141,21 +163,21 @@ public:
                 lineBuffer[0] = '\0';
             }
         }
-        // for (size_t i = 0; i < currentList.size(); ++i)
-        // {
-        //     if (currentList[i].owner != nullptr)
-        //     {
-        //         LOG_INFO(
-        //             "Resource Slot %d: Owned by Thread ID %d with Slot Occupancy %d",
-        //             i,
-        //             currentList[i].owner->getThreadId(),
-        //             currentList[i].slotOccupancy);
-        //     }
-        //     else
-        //     {
-        //         LOG_INFO("Resource Slot %d: Unallocated", i);
-        //     }
-        // }
+        for (int i = 0; i < static_cast<int>(currentList.size()); ++i)
+        {
+            if (currentList[i].owner != nullptr)
+            {
+                LOG_INFO(
+                    "Resource Slot %d: Owned by Thread ID %d with Slot Occupancy %d",
+                    i,
+                    currentList[i].owner->getThreadId(),
+                    currentList[i].slotOccupancy);
+            }
+            else
+            {
+                LOG_INFO("Resource Slot %d: Unallocated", i);
+            }
+        }
     }
 
 private:
@@ -221,6 +243,7 @@ private:
 
     std::vector<Thread*> activeTasks; // List of tasks to be scheduled
     std::vector<Thread*> hardRtTasks; // List of hard real-time tasks
+    std::vector<Thread*> systemTasks; // List of system tasks
     uint8_t ongoingSlotOccupancy{0};
     Resource resourceListPrimary[50];
     Resource resourceListSecondary[50];

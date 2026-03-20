@@ -123,27 +123,38 @@ private:
 };
 } // namespace core
 
-#define LOG_KERNEL(fmt, ...)                                       \
+#ifndef LOG_KERNEL
+#define LOG_KERNEL(fmt, ...)                                        \
+    do                                                              \
+    {                                                               \
+        auto* L = core::Logger::getInstance();                      \
+        if (L) L->log(core::LogLevel::KERNEL, fmt, ##__VA_ARGS__);  \
+    } while (0)
+#endif
+
+#ifndef LOG_DEBUG
+#define LOG_DEBUG(fmt, ...)                                        \
     do                                                             \
     {                                                              \
         auto* L = core::Logger::getInstance();                     \
-        if (L) L->log(core::LogLevel::KERNEL, fmt, ##__VA_ARGS__); \
+        if (L) L->log(core::LogLevel::DEBUG, fmt, ##__VA_ARGS__);  \
     } while (0)
-#define LOG_DEBUG(fmt, ...)                                       \
+#endif
+
+#ifndef LOG_INFO
+#define LOG_INFO(fmt, ...)                                        \
     do                                                            \
     {                                                             \
         auto* L = core::Logger::getInstance();                    \
-        if (L) L->log(core::LogLevel::DEBUG, fmt, ##__VA_ARGS__); \
+        if (L) L->log(core::LogLevel::INFO, fmt, ##__VA_ARGS__);  \
     } while (0)
-#define LOG_INFO(fmt, ...)                                       \
-    do                                                           \
-    {                                                            \
-        auto* L = core::Logger::getInstance();                   \
-        if (L) L->log(core::LogLevel::INFO, fmt, ##__VA_ARGS__); \
+#endif
+
+#ifndef LOG_ERROR
+#define LOG_ERROR(fmt, ...)                                        \
+    do                                                             \
+    {                                                              \
+        auto* L = core::Logger::getInstance();                     \
+        if (L) L->log(core::LogLevel::ERROR, fmt, ##__VA_ARGS__);  \
     } while (0)
-#define LOG_ERROR(fmt, ...)                                       \
-    do                                                            \
-    {                                                             \
-        auto* L = core::Logger::getInstance();                    \
-        if (L) L->log(core::LogLevel::ERROR, fmt, ##__VA_ARGS__); \
-    } while (0)
+#endif
