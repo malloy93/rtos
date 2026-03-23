@@ -54,6 +54,24 @@ target_link_libraries(test_Scheduler PRIVATE GTest::gtest_main)
 
 gtest_discover_tests(test_Scheduler)
 
+add_executable(test_ModernScheduler
+    test_ModernScheduler.cpp
+)
+
+target_include_directories(test_ModernScheduler PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/stubs
+    ${CMAKE_CURRENT_SOURCE_DIR}/..
+    ${CMAKE_CURRENT_SOURCE_DIR}/../RTOS
+)
+
+target_compile_options(test_ModernScheduler PRIVATE
+    -include ${CMAKE_CURRENT_SOURCE_DIR}/stubs/Logger.hpp
+)
+
+target_link_libraries(test_ModernScheduler PRIVATE GTest::gtest_main)
+
+gtest_discover_tests(test_ModernScheduler)
+
 add_executable(test_Core
     test_Core.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../RTOS/Core.cpp

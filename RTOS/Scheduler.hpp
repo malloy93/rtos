@@ -7,12 +7,6 @@ namespace core
 
 struct Thread;
 
-struct Resource
-{
-    Thread* owner{nullptr};
-    uint8_t slotOccupancy{0};
-};
-
 uint8_t constexpr systemTaskSlot{9};
 
 class Scheduler
@@ -32,6 +26,9 @@ public:
                 break;
             case TaskType::NORMAL:
                 activeTasks.push_back(thread);
+                break;
+            case TaskType::SOFT_RT:
+            case TaskType::LOW_PRIO:
                 break;
         }
     }
@@ -196,26 +193,23 @@ private:
     {
         uint16_t highestPriority = 0;
         uint8_t selectedTaskId = invalidThreadId;
+        Thread* selectedTask = nullptr;
         for (const auto& task : activeTasks)
         {
             if (not task->isAllocated and task->wagedPriority > highestPriority)
             {
                 highestPriority = task->wagedPriority;
                 selectedTaskId = task->getThreadId();
+                selectedTask = task;
             }
         }
-        if (selectedTaskId != invalidThreadId)
-        {
-            Thread* selectedTask = getThreadById(selectedTaskId);
-            if (setAllocated)
-            {
-                selectedTask->isAllocated = true;
-            }
-            nextResourceList[idx].owner = selectedTask;
-            nextResourceList[idx].slotOccupancy = 1;
-            currentSliceOccupancy += nextResourceList[idx].slotOccupancy;
-            ++idx;
-        }
+
+        selectedTask->isAllocated = setAllocated;
+
+        nextResourceList[idx].owner = selectedTask;
+        nextResourceList[idx].slotOccupancy = 1;
+        currentSliceOccupancy += nextResourceList[idx].slotOccupancy;
+        ++idx;
     }
     std::span<Resource> getCurrentResourceList()
     {
@@ -244,6 +238,7 @@ private:
     std::vector<Thread*> activeTasks; // List of tasks to be scheduled
     std::vector<Thread*> hardRtTasks; // List of hard real-time tasks
     std::vector<Thread*> systemTasks; // List of system tasks
+
     uint8_t ongoingSlotOccupancy{0};
     Resource resourceListPrimary[50];
     Resource resourceListSecondary[50];

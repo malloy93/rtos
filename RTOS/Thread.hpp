@@ -9,7 +9,6 @@
 namespace core
 {
 
-
 class Logger;
 struct Thread
 {
@@ -37,6 +36,29 @@ struct Thread
     void setStackPtr(uint32_t ptr) { startPtr = ptr; }
     void logSizeChange();
     void calculateWagedPriority() { wagedPriority = (10 - priority) * (starvationCounter + 1); }
+    void calculateWagedPriority(bool deadlineMissedBoost, uint8_t deadlinePenalty)
+    {
+        if (deadlineMissedBoost)
+            wagedPriority = (10 - priority) * (starvationCounter + deadline_missed + 1);
+        else
+            wagedPriority = (10 - priority) * (starvationCounter + 1) + deadline_missed * deadlinePenalty;
+    }
+    void calculateWagedPriority(DeadlineBoostMode mode, uint8_t deadlinePenalty)
+    {
+        switch (mode)
+        {
+            case DeadlineBoostMode::NONE:
+                wagedPriority = (10 - priority) * (starvationCounter + 1) + deadline_missed * deadlinePenalty;
+                break;
+            case DeadlineBoostMode::STARVATION_FOLD:
+                wagedPriority = (10 - priority) * (starvationCounter + deadline_missed + 1);
+                break;
+            case DeadlineBoostMode::ENHANCED:
+                wagedPriority =
+                    (10 - priority) * (starvationCounter + 1) + (deadline_missed * deadline_missed) * deadlinePenalty;
+                break;
+        }
+    }
 
     const uint16_t& getThreadId() const { return threadId; }
 
@@ -55,10 +77,13 @@ struct Thread
 
     const uint16_t threadId{0};
     TaskType taskType{TaskType::NORMAL};
+    TaskClass task_class{TaskClass::NORMAL};
     ThreadState state{ThreadState::READY};
 
     uint8_t priority{1};
     uint16_t starvationCounter{0};
+    uint16_t starvation{0};
+    uint8_t deadline_missed{0};
     uint16_t wagedPriority{0};
     uint8_t minResourceSlice{1};
     bool isAllocated{false};

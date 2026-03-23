@@ -44,7 +44,7 @@ void resourceAllocatorTask()
 }
 void resourceUpdateTask()
 {
-    while (true)
+     while (true)
     {
         __WFI(); // Wait For Interrupt
     }

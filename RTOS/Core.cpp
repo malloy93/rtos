@@ -76,12 +76,6 @@ void RTCore::createStack(uint16_t threadId)
     {
         threadStack[stackSize - i] = 0x04040404;
     }
-    // LOG_DEBUG("Stack memory: ");
-    // for (int i = 0; i <= 17; i++)
-    // {
-    //     LOG_DEBUG("%d: 0x%p: 0x%08X", i, &threadStack[stackSize - i], threadStack[stackSize - i]);
-    // }
-    // LOG_DEBUG("% 02X ", &threadStack[stackSize - 16]);
 
 #ifdef RTOS_HOST_TEST
     thread->setStackPtr(0);
@@ -113,26 +107,21 @@ uint8_t RTCore::addThreads(std::vector<void (*)()>& threads)
         auto threadId = createThread(threads.at(i), TaskType::NORMAL);
         createStack(threadId);
     }
-
-    // for (std::size_t i = 0; i < numThreads; i++)
-    // {
-    //     auto threadId = threadControlBlocks[i]->getThreadId();
-    //     createStack(threadId);
-    // }
-
     return 1;
 }
 
 void RTCore::initializeScheduler()
 {
+    LOG_INFO("=========12131=========");
     for (const auto& thread : threadControlBlocks)
     {
         activeStacks.push_back(thread);
-        scheduler.addTask(thread);
+        modernScheduler.addTask(thread);
     }
-    scheduler.allocateResourceList();
-    scheduler.printResourceAllocation();
-    // finishingThread = getNextThread();
+    modernScheduler.allocateResourceList();
+    modernScheduler.switchResourceList(); // promote it to active
+    dispatcher.init(&modernScheduler, getThreadById(1)); // idle task is thread 0
+    modernSlotIndex = 0;
     startingThread = getNextThread();
 }
 

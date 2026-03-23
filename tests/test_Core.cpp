@@ -15,41 +15,24 @@ uint32_t getClockFreq()
 
 namespace sysTasks
 {
-void idleTask()
-{
-}
-void systemReconfigurationTask()
-{
-}
-void eventTracerTask()
-{
-}
-void resourceAllocatorTask()
-{
-}
-void resourceUpdateTask()
-{
-}
+void idleTask() {}
+void systemReconfigurationTask() {}
+void eventTracerTask() {}
+void resourceAllocatorTask() {}
+void resourceUpdateTask() {}
 } // namespace sysTasks
 
-extern "C" void start_thread_switch()
-{
-}
+extern "C" void start_thread_switch() {}
 
-extern "C" void context_change()
-{
-}
+extern "C" void context_change() {}
 
-namespace {
+namespace
+{
 
 using namespace core;
 
-void taskA()
-{
-}
-void taskB()
-{
-}
+void taskA() {}
+void taskB() {}
 
 class CoreTest : public ::testing::Test
 {
@@ -101,6 +84,8 @@ TEST_F(CoreTest, GetNextThread_DefaultRoundRobinCyclesThroughActiveStacks)
 
     EXPECT_EQ(core->getNextThread(), t1);
     EXPECT_EQ(core->getNextThread(), t2);
+    core->launch(100);
+    // core-
 }
 
 TEST_F(CoreTest, GetNextThread_PriorityBasedReturnsNull)

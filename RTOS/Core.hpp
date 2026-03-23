@@ -4,7 +4,9 @@
 #include <vector>
 #include "Logger.hpp"
 #include "MemoryPool.hpp"
+#include "ModernScheduler.hpp"
 #include "RTOS/CircularBuffer.hpp"
+#include "RTOS/Dispatcher.hpp"
 #include "Scheduler.hpp"
 #include "SysTasks.hpp"
 #include "Thread.hpp"
@@ -44,10 +46,23 @@ public:
     void suspend(uint16_t);
     void runAllocator()
     {
-        scheduler.allocateResourceList();
+        modernScheduler.allocateResourceList();
         // scheduler.printResourceAllocation();
     }
     void pushLog(std::span<char> data) { loggerBuffer.push(data); }
+
+    // Thread* getNextThread()
+    // {
+    //     switch (schedulerType)
+    //     {
+    //         case SchedulerType::ROUND_ROBIN:
+    //             return getNextThreadRoundRobin();
+    //         case SchedulerType::PRIORITY_BASED:
+    //             return getNextThreadPriorityBased();
+    //         default:
+    //             return getNextThreadRoundRobin();
+    //     }
+    // }
 
     Thread* getNextThread()
     {
@@ -57,14 +72,44 @@ public:
                 return getNextThreadRoundRobin();
             case SchedulerType::PRIORITY_BASED:
                 return getNextThreadPriorityBased();
+            case SchedulerType::RESOURCE_GRID:
+                return getNextThreadModern();
             default:
                 return getNextThreadRoundRobin();
         }
     }
+
+    Thread* getNextThreadModern()
+    {
+        // // wrap — new list becomes active, trigger reallocation for next cycle
+        // if (modernSlotIndex >= RESOURCE_LIST_SIZE)
+        // {
+        //     modernSlotIndex = 0;
+        //     modernScheduler.switchResourceList();
+        // }
+
+        // Thread* next = modernScheduler.getNextThread(modernSlotIndex);
+        // ++modernSlotIndex;
+
+        // // slot 9 is the scheduler system task — it will call allocateResourceList()
+        // // internally via its task function, nothing to do here
+
+        // // fallback — if slot is empty (not yet allocated) fall back to RR
+        // if (next == nullptr)
+        // {
+        //     return getNextThreadRoundRobin();
+        // }
+
+        // return next;
+        Thread* next = dispatcher.getNextThread();
+
+        return next;
+    }
+
     void addSystemThreads()
     {
-        add(sysTasks::idleTask, TaskType::SYSTEM);
         add(sysTasks::resourceAllocatorTask, TaskType::SYSTEM);
+        add(sysTasks::idleTask, TaskType::SYSTEM);
         add(sysTasks::eventTracerTask, TaskType::SYSTEM);
         add(sysTasks::resourceUpdateTask, TaskType::SYSTEM);
         add(sysTasks::systemReconfigurationTask, TaskType::SYSTEM);
@@ -79,7 +124,11 @@ public:
 private:
     MemoryPool memoryPool;
     Scheduler scheduler;
+    ModernScheduler modernScheduler;
+    Dispatcher dispatcher{};
     CircularBuffer loggerBuffer;
+    uint8_t modernSlotIndex{0};
+    bool nextListReady{false};
     void initializeScheduler();
     uint16_t createThread(void (*)(), TaskType type);
     void createStack(uint16_t);
@@ -94,13 +143,14 @@ private:
         LOG_INFO("Memory pool initialized");
         threadControlBlocks.reserve(20);
         addSystemThreads();
+        dispatcher.init(&modernScheduler, threadControlBlocks[1]); // idle task
     }
 
     utils::IdGen& idGen;
 
     uint32_t systickPrescaler{};
     std::vector<Thread*> threadControlBlocks; // change to unordered_map [threadId, tcb] or not // no this is dumb
-    SchedulerType schedulerType{SchedulerType::ROUND_ROBIN};
+    SchedulerType schedulerType{SchedulerType::RESOURCE_GRID};
     std::vector<Thread*> activeStacks;
     // std::vector<Stack*> mappedStacks;
     uint8_t currentStackIndex{0};
