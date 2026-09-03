@@ -68,10 +68,12 @@ TEST_F(CoreTest, GetThreadById_ReturnsThreadWhenPresent)
     EXPECT_EQ(thread->getThreadId(), id);
 }
 
-TEST_F(CoreTest, GetNextThread_DefaultRoundRobinCyclesThroughActiveStacks)
+TEST_F(CoreTest, GetNextThread_RoundRobinCyclesThroughActiveStacks)
 {
     auto* core = RTCore::getInstance();
     ASSERT_NE(core, nullptr);
+
+    core->setSchedulerType(SchedulerType::ROUND_ROBIN);
 
     auto id1 = core->add(taskA);
     auto id2 = core->add(taskB);
@@ -84,8 +86,7 @@ TEST_F(CoreTest, GetNextThread_DefaultRoundRobinCyclesThroughActiveStacks)
 
     EXPECT_EQ(core->getNextThread(), t1);
     EXPECT_EQ(core->getNextThread(), t2);
-    core->launch(100);
-    // core-
+    EXPECT_EQ(core->getNextThread(), core->activeStacks.front());
 }
 
 TEST_F(CoreTest, GetNextThread_PriorityBasedReturnsNull)

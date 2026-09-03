@@ -125,38 +125,44 @@ TEST_F(ModernSchedulerTest, AllocateResourceList_GuaranteedPassForHardRT)
     }
 }
 
-TEST_F(ModernSchedulerTest, AllocateResourceList_DeadlineMissForHardRT)
+TEST_F(ModernSchedulerTest, AllocateResourceList_DeadlineMissForSoftRT)
 {
-    // Create 9 hard-RT tasks. A frame only has 9 allocatable slots (0-8).
-    std::vector<Thread> threads;
-    for (uint8_t i = 0; i < 9; ++i)
-    {
-        threads.emplace_back(idleTask, 100 + i, TaskType::HARD_RT);
-    }
-    // Add a 10th task that won't fit.
-    Thread wont_fit{idleTask, 200, TaskType::HARD_RT};
+    scheduler.addTask(&sys1);
+    scheduler.addTask(&sys2);
+    scheduler.addTask(&sys3);
+    scheduler.addTask(&sys4);
+    scheduler.addTask(&sys5);
+    scheduler.addTask(&hrt1);
+    scheduler.addTask(&hrt2);
 
-    for (auto& t : threads)
+    std::vector<Thread> softRtTasks;
+    softRtTasks.reserve(MAX_SOFT_RT_TASKS);
+    for (uint8_t i = 0; i < MAX_SOFT_RT_TASKS; ++i)
     {
-        t.priority = 5; // Equal priority
-        scheduler.addTask(&t);
+        softRtTasks.emplace_back(idleTask, 100 + i, TaskType::SOFT_RT);
     }
-    wont_fit.priority = 1; // Lowest priority, so it's last
-    scheduler.addTask(&wont_fit);
 
-    ASSERT_EQ(wont_fit.deadline_missed, 0);
+    for (auto& task : softRtTasks)
+    {
+        task.priority = 1;
+        scheduler.addTask(&task);
+    }
+
+    Thread& lastSoftRt = softRtTasks.back();
+    ASSERT_EQ(lastSoftRt.deadline_missed, 0);
 
     scheduler.allocateResourceList();
 
-    // Since it couldn't be placed in the guaranteed pass in any of the 5 frames,
-    // its deadline_missed count should be 5.
-    EXPECT_EQ(wont_fit.deadline_missed, 5);
+    // A system task reserves slot 9 in every frame. Two hard-RT tasks and seven
+    // of the eight soft-RT tasks consume slots 0-8, so the last soft-RT task
+    // misses once per frame.
+    EXPECT_EQ(lastSoftRt.deadline_missed, FRAMES_PER_LIST);
 }
 
 TEST_F(ModernSchedulerTest, AllocateResourceList_FillPhaseIsFair)
 {
-    nrm1.priority = 10; // High priority
-    nrm2.priority = 9; // Slightly lower priority
+    nrm1.priority = 1; // High priority: wagedPriority = 9
+    nrm2.priority = 2; // Slightly lower priority: wagedPriority = 8
 
     scheduler.addTask(&nrm1);
     scheduler.addTask(&nrm2);
@@ -175,8 +181,8 @@ TEST_F(ModernSchedulerTest, AllocateResourceList_FillPhaseIsFair)
     EXPECT_EQ(list[firstEmptySlot].owner, &nrm1);
 
     // Slot 3 should now be filled by nrm2, because nrm1's priority was penalized
-    // nrm1 eff: 10 / (1+1) = 5
-    // nrm2 eff: 9 / (0+1) = 9
+    // nrm1 eff: 9 / (1+1) = 4
+    // nrm2 eff: 8 / (0+1) = 8
     EXPECT_EQ(list[firstEmptySlot + 1].owner, &nrm2);
 }
 

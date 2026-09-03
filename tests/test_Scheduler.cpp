@@ -97,7 +97,7 @@ TEST_F(SchedulerTest, AllocateResourceList_SecondRunWritesInactiveList)
     EXPECT_EQ(scheduler.resourceListSecondary[0].owner, &t2);
 }
 
-TEST_F(SchedulerTest, AllocateResourceList_EightTasksWithDifferentPriorities_FillsSliceInPriorityOrder)
+TEST_F(SchedulerTest, AllocateResourceList_SeparatesNormalAndSystemTaskSlots)
 {
     Thread a{entry, 1, TaskType::SYSTEM};
     Thread b{entry, 2, TaskType::SYSTEM};
@@ -128,15 +128,16 @@ TEST_F(SchedulerTest, AllocateResourceList_EightTasksWithDifferentPriorities_Fil
 
     ASSERT_TRUE(scheduler.allocateResourceList());
 
-    EXPECT_EQ(scheduler.resourceListPrimary[0].owner, &a);
-    EXPECT_EQ(scheduler.resourceListPrimary[1].owner, &b);
-    EXPECT_EQ(scheduler.resourceListPrimary[2].owner, &c);
-    EXPECT_EQ(scheduler.resourceListPrimary[3].owner, &d);
-    EXPECT_EQ(scheduler.resourceListPrimary[4].owner, &e);
-    EXPECT_EQ(scheduler.resourceListPrimary[5].owner, &f);
-    EXPECT_EQ(scheduler.resourceListPrimary[6].owner, &g);
-    EXPECT_EQ(scheduler.resourceListPrimary[7].owner, &h);
-    EXPECT_EQ(scheduler.resourceListPrimary[8].owner, &a);
+    EXPECT_EQ(scheduler.resourceListPrimary[0].owner, &c);
+    EXPECT_EQ(scheduler.resourceListPrimary[1].owner, &d);
+    EXPECT_EQ(scheduler.resourceListPrimary[2].owner, &e);
+    EXPECT_EQ(scheduler.resourceListPrimary[3].owner, &f);
+    EXPECT_EQ(scheduler.resourceListPrimary[4].owner, &g);
+    for (uint8_t slot = 5; slot < systemTaskSlot; ++slot)
+    {
+        EXPECT_EQ(scheduler.resourceListPrimary[slot].owner, &c) << "slot=" << static_cast<int>(slot);
+    }
+    EXPECT_EQ(scheduler.resourceListPrimary[systemTaskSlot].owner, &a);
 }
 
 } // namespace
