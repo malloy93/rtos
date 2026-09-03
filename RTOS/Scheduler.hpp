@@ -192,14 +192,14 @@ private:
         bool setAllocated = true)
     {
         uint16_t highestPriority = 0;
-        uint8_t selectedTaskId = invalidThreadId;
+        // uint8_t selectedTaskId = invalidThreadId;
         Thread* selectedTask = nullptr;
         for (const auto& task : activeTasks)
         {
             if (not task->isAllocated and task->wagedPriority > highestPriority)
             {
                 highestPriority = task->wagedPriority;
-                selectedTaskId = task->getThreadId();
+                // selectedTaskId = task->getThreadId();
                 selectedTask = task;
             }
         }
