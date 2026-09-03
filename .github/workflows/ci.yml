@@ -1,0 +1,107 @@
+name: RTOS CI
+
+on:
+  push:
+    branches:
+      - master
+
+  pull_request:
+    branches:
+      - master
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  host-tests:
+    name: Host tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install host dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes \
+            cmake \
+            g++ \
+            ninja-build
+
+      - name: Configure host tests
+        run: |
+          cmake \
+            -S tests \
+            -B build/host-debug \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug
+
+      - name: Build host tests
+        run: |
+          cmake \
+            --build build/host-debug \
+            --parallel
+
+      - name: Run host tests
+        run: |
+          ctest \
+            --test-dir build/host-debug \
+            --output-on-failure \
+            --timeout 30
+
+  firmware-build:
+    name: STM32F429 firmware
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository with submodules
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Install ARM toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes \
+            cmake \
+            gcc-arm-none-eabi \
+            libstdc++-arm-none-eabi-newlib \
+            ninja-build
+
+      - name: Print tool versions
+        run: |
+          cmake --version
+          ninja --version
+          arm-none-eabi-gcc --version
+          arm-none-eabi-g++ --version
+
+      - name: Configure firmware
+        run: |
+          cmake \
+            -S . \
+            -B build/firmware-debug \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug
+
+      - name: Build firmware
+        run: |
+          cmake \
+            --build build/firmware-debug \
+            --parallel
+
+      - name: Upload firmware artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: rtos-stm32f429-${{ github.sha }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            build/firmware-debug/rrtos_f429_core.elf
+            build/firmware-debug/rrtos_f429_core.hex
+            build/firmware-debug/rrtos_f429_core.bin
+            build/firmware-debug/rrtos_f429_core.map
