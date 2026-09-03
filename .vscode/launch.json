@@ -2,43 +2,19 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Run cortex-debug",
+            "name": "RTOS: Debug STM32F429I-DISC1",
             "type": "cortex-debug",
             "request": "launch",
             "servertype": "openocd",
             "cwd": "${workspaceFolder}",
-            "executable": "${workspaceFolder}/build/rrtos_f429_core.elf",
+            "executable": "${workspaceFolder}/build/firmware-debug/rrtos_f429_core.elf",
             "device": "STM32F429ZI",
             "configFiles": [
-                "interface/stlink.cfg",
-                "target/stm32f4x.cfg"
+                "${workspaceFolder}/openocd/stm32f429i-disc1.cfg"
             ],
-            "svdFile": "${workspaceFolder}/STM32F429.svd",
-            // "runToMain": true,
-            "liveWatch": {
-                "enabled": true,
-                "samplesPerSecond": 4
-            },
-            "showDevDebugOutput": "raw",
             "gdbPath": "/usr/bin/gdb-multiarch",
-            "gdbTarget": "localhost:3333",
-            "preLaunchCommands": [
-                "monitor reset halt"
-            ],
-            "postLaunchCommands": [],
-            "overrideLaunchCommands": [
-                "load",
-                "monitor reset init",
-                "monitor halt"
-            ],
-            "runToEntryPoint": "main",
-            "stopAtEntry": true,
-            "serverStarted": "Info : Listening on port 3333 for gdb connections",
-            "logging": {
-                "engineLogging": true,
-                "trace": true,
-                "traceResponse": true
-            }
+            "preLaunchTask": "RTOS: Build firmware",
+            "runToEntryPoint": "main"
         }
     ]
 }

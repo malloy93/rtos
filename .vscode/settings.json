@@ -118,6 +118,7 @@
             ]
         }
     },
+    "cmake.useCMakePresets": "always",
     // "editor.semanticHighlighting.enabled": true,
     // "C_Cpp.enhancedColorization": "enabled",
     // "editor.tokenColorCustomizations": {

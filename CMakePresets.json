@@ -1,0 +1,26 @@
+{
+    "version": 3,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 21,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "firmware-debug",
+            "displayName": "STM32F429I-DISC1 — Debug",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/firmware-debug",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "firmware-debug",
+            "configurePreset": "firmware-debug"
+        }
+    ]
+}

@@ -1,0 +1,30 @@
+{
+	"folders": [
+		{
+			"name": "RTOS",
+			"path": "."
+		}
+	],
+	"settings": {
+		"terminal.integrated.cwd": "${workspaceFolder:RTOS}",
+		"cmake.sourceDirectory": "${workspaceFolder:RTOS}",
+		"cmake.useCMakePresets": "always",
+		"cmake.configureOnOpen": false,
+		"C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+		"files.watcherExclude": {
+			"**/build/**": true
+		},
+		"search.exclude": {
+			"**/build/**": true
+		}
+	},
+	"extensions": {
+		"recommendations": [
+			"ms-vscode.cpptools",
+			"ms-vscode.cmake-tools",
+			"marus25.cortex-debug",
+			"ms-python.python",
+			"redhat.vscode-yaml"
+		]
+	}
+}

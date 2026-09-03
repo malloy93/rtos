@@ -2,20 +2,138 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "build", // Task "build", do którego odwołuje się launch.json
-            "type": "shell", // Użycie powłoki systemowej do wykonania polecenia
-            "command": "make", // Komenda wywołująca kompilację projektu
+            "label": "RTOS: Configure firmware",
+            "type": "shell",
+            "command": "cmake",
             "args": [
-                "all" // Argument "all", wykonujący domyślny cel kompilacji w Makefile
+                "--preset",
+                "firmware-debug"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "RTOS: Build firmware",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "--build",
+                "--preset",
+                "firmware-debug",
+                "--parallel"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "dependsOn": "RTOS: Configure firmware",
+            "problemMatcher": [
+                "$gcc"
             ],
             "group": {
-                "kind": "build", // Task jest częścią grupy build
-                "isDefault": true // Jest to domyślny task kompilacji
-            },
-            "problemMatcher": [
-                "$gcc" // Matcher problemów, który identyfikuje błędy i ostrzeżenia kompilatora GCC
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "RTOS: Configure host tests",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "-S",
+                "tests",
+                "-B",
+                "build/host-debug",
+                "-G",
+                "Ninja",
+                "-DCMAKE_BUILD_TYPE=Debug"
             ],
-            "detail": "Task responsible for compiling the project" // Dodatkowy opis tasku
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "RTOS: Build host tests",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "--build",
+                "build/host-debug",
+                "--parallel"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "dependsOn": "RTOS: Configure host tests",
+            "problemMatcher": [
+                "$gcc"
+            ]
+        },
+        {
+            "label": "RTOS: Run host tests",
+            "type": "shell",
+            "command": "ctest",
+            "args": [
+                "--test-dir",
+                "build/host-debug",
+                "--output-on-failure"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "dependsOn": "RTOS: Build host tests",
+            "problemMatcher": [],
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "RTOS: Probe board",
+            "type": "shell",
+            "command": "openocd",
+            "args": [
+                "-f",
+                "${workspaceFolder}/openocd/stm32f429i-disc1.cfg",
+                "-c",
+                "init; reset halt; flash info 0; shutdown"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "RTOS: Flash firmware",
+            "type": "shell",
+            "command": "openocd",
+            "args": [
+                "-f",
+                "${workspaceFolder}/openocd/stm32f429i-disc1.cfg",
+                "-c",
+                "program ${workspaceFolder}/build/firmware-debug/rrtos_f429_core.elf verify reset exit"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "dependsOn": "RTOS: Build firmware",
+            "problemMatcher": []
+        },
+        {
+            "label": "RTOS: UART",
+            "type": "shell",
+            "command": "picocom --baud 2000000 --flow n /dev/serial/by-id/usb-STMicroelectronics_STM32_STLink_*-if02",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "focus": true,
+                "panel": "dedicated"
+            }
         }
     ]
 }
