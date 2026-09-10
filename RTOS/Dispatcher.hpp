@@ -42,6 +42,7 @@ public:
         {
             slotIndex = 0;
             allocator->switchResourceList();
+            LOG_DEBUG("Dispatcher: Switched resource list, slotIndex reset to 0");
         }
         if (next == nullptr)
         {
