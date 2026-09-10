@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdio>
 
-// Host-side log redirect — definiowane PRZED Logger.hpp z RTOS/
+// Host-side log redirect — definiowane PRZED rtos/Logger.hpp
 // Dzięki #ifndef guard w Logger.hpp, te definicje mają pierwszeństwo.
 // Logi z MemoryPool.cpp trafiają na stdout zamiast na UART/DMA.
 

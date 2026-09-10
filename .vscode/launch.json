@@ -10,7 +10,7 @@
             "executable": "${workspaceFolder}/build/firmware-debug/rrtos_f429_core.elf",
             "device": "STM32F429ZI",
             "configFiles": [
-                "${workspaceFolder}/openocd/stm32f429i-disc1.cfg"
+                "${workspaceFolder}/platform/stm32f429i_disc1/openocd/stm32f429i-disc1.cfg"
             ],
             "gdbPath": "/usr/bin/gdb-multiarch",
             "preLaunchTask": "RTOS: Build firmware",

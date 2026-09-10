@@ -4,9 +4,9 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "${workspaceFolder}/Core/Inc",
-                "${workspaceFolder}/RTOS",
-                "${workspaceFolder}/main",
+                "${workspaceFolder}/kernel/include",
+                "${workspaceFolder}/platform/stm32f429i_disc1/include",
+                "${workspaceFolder}/apps/demo",
                 "${workspaceFolder}/Drivers/STM32F4xx_HAL_Driver/Inc",
                 "${workspaceFolder}/Drivers/CMSIS/Device/ST/STM32F4xx/Include"
             ],

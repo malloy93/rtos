@@ -96,7 +96,7 @@
             "command": "openocd",
             "args": [
                 "-f",
-                "${workspaceFolder}/openocd/stm32f429i-disc1.cfg",
+                "${workspaceFolder}/platform/stm32f429i_disc1/openocd/stm32f429i-disc1.cfg",
                 "-c",
                 "init; reset halt; flash info 0; shutdown"
             ],
@@ -111,7 +111,7 @@
             "command": "openocd",
             "args": [
                 "-f",
-                "${workspaceFolder}/openocd/stm32f429i-disc1.cfg",
+                "${workspaceFolder}/platform/stm32f429i_disc1/openocd/stm32f429i-disc1.cfg",
                 "-c",
                 "program ${workspaceFolder}/build/firmware-debug/rrtos_f429_core.elf verify reset exit"
             ],
