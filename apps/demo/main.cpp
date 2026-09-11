@@ -79,7 +79,7 @@ int main(void)
     rtKernel->add(task2);
     rtKernel->add(task4);
     rtKernel->add(task5);
-    rtKernel->launch(10u);
+    rtKernel->launch();
 
     while (1)
     {

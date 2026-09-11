@@ -1,13 +1,14 @@
 #pragma once
 #include <cstdint>
-#include <span>
+#include <rtos/ModernScheduler.hpp>
 #include <rtos/Thread.hpp>
 #include <rtos/Types.hpp>
+#include <span>
 
 namespace core
 {
 
-class ModernScheduler;
+// class ModernScheduler;
 
 // ─── Dispatcher ──────────────────────────────────────────────────────────────
 // Owns the slot counter, drives context switches, updates starvation counters.

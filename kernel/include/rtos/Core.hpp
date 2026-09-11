@@ -1,16 +1,16 @@
 #pragma once
 #include <map>
-#include <stdint.h>
-#include <vector>
+#include <rtos/CircularBuffer.hpp>
+#include <rtos/Dispatcher.hpp>
 #include <rtos/Logger.hpp>
 #include <rtos/MemoryPool.hpp>
 #include <rtos/ModernScheduler.hpp>
-#include <rtos/CircularBuffer.hpp>
-#include <rtos/Dispatcher.hpp>
 #include <rtos/Scheduler.hpp>
 #include <rtos/SysTasks.hpp>
 #include <rtos/Thread.hpp>
 #include <rtos/Utils.hpp>
+#include <stdint.h>
+#include <vector>
 
 namespace core
 {
@@ -26,7 +26,7 @@ public:
     static RTCore* getInstance();
 
     uint8_t addThreads(std::vector<void (*)()>&);
-    void launch(uint32_t);
+    void launch();
 
     void logThreadInfo();
     Thread* getThreadById(uint16_t id)
@@ -46,7 +46,20 @@ public:
     void suspend(uint16_t);
     void runAllocator()
     {
+        CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+        DWT->CYCCNT = 0;
+        DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+
+        __DSB();
+        __ISB();
+
+        const uint32_t start = DWT->CYCCNT;
+
         modernScheduler.allocateResourceList();
+
+        cycles = DWT->CYCCNT - start;
+        timeNs = static_cast<uint32_t>((static_cast<uint64_t>(cycles) * 1'000'000'000ULL) / SystemCoreClock);
+        // modernScheduler.allocateResourceList();
         // scheduler.printResourceAllocation();
     }
     void pushLog(std::span<char> data) { loggerBuffer.push(data); }
@@ -120,6 +133,8 @@ public:
     void changeSliceTime(uint8_t newSliceTime) { sliceTime = newSliceTime; }
 
     void setSchedulerType(SchedulerType type) { schedulerType = type; }
+    uint32_t cycles{0};
+    uint32_t timeNs{0};
 
 private:
     MemoryPool memoryPool;

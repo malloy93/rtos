@@ -146,10 +146,9 @@ void RTCore::logThreadInfo()
     }
 }
 
-void RTCore::launch(uint32_t quanta)
+void RTCore::launch()
 {
 #ifdef RTOS_HOST_TEST
-    (void)quanta;
     initializeScheduler();
     logThreadInfo();
 #else
