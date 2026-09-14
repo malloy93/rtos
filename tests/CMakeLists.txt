@@ -64,4 +64,4 @@ gtest_discover_tests(test_Core)
 gtest_discover_tests(test_UartProtocol)
 add_test(
     NAME uart_receiver
-    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/unit/test_uart_receiver.py)
+    COMMAND ${Python3_EXECUTABLE} -B ${CMAKE_CURRENT_SOURCE_DIR}/unit/test_uart_receiver.py)

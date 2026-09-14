@@ -122,6 +122,28 @@
             "problemMatcher": []
         },
         {
+            "label": "RTOS: UART receiver",
+            "detail": "Decode binary UART frames. Stop the RTOS: UART (picocom) task first.",
+            "type": "process",
+            "command": "python3",
+            "args": [
+                "-B",
+                "${workspaceFolder}/tools/uart_receiver.py",
+                "${input:uartPort}",
+                "--baud",
+                "2000000"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "focus": true,
+                "panel": "dedicated"
+            }
+        },
+        {
             "label": "RTOS: UART",
             "type": "shell",
             "command": "picocom --baud 2000000 --flow n /dev/serial/by-id/usb-STMicroelectronics_STM32_STLink_*-if02",
@@ -134,6 +156,14 @@
                 "focus": true,
                 "panel": "dedicated"
             }
+        }
+    ],
+    "inputs": [
+        {
+            "id": "uartPort",
+            "type": "promptString",
+            "description": "Serial port for the UART receiver",
+            "default": "/dev/ttyACM0"
         }
     ]
 }

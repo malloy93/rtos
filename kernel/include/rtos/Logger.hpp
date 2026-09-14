@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cstdarg>
 #include <rtos/LogLevel.hpp>
 #include <rtos/Telemetry/UartProtocol.hpp>
 

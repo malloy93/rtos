@@ -64,7 +64,6 @@ enum : uint8_t
     SVC_REMOVETASK = 1,
     SVC_SUSPENDASK = 2,
     SVC_RESUMETASK = 3
-
 };
 
 enum class TaskType : uint8_t
@@ -102,14 +101,6 @@ enum class SchedulerType : uint8_t
     PRIORITY_WAGED, // calculete priority based on starvation and execution time
     RESOURCE_GRID, // planned execution based on 50ms resource grid
     ADAPTIVE_RESOURCE_GRID // dynamic adjustment of resource grid based on system load or external events
-};
-
-enum class TaskClass : uint8_t
-{
-    HARD_RT = 0,
-    SYSTEM = 1,
-    NORMAL = 2,
-    LOW_PRIO = 3,
 };
 
 enum class SchedulerMode : uint8_t

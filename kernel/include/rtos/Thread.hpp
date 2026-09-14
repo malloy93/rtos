@@ -1,8 +1,8 @@
 #pragma once
 #include <cstdint>
 #include <iostream>
-#include <sstream>
 #include <rtos/Logger.hpp>
+#include <sstream>
 
 #include <rtos/Types.hpp>
 
@@ -13,22 +13,13 @@ class Logger;
 struct Thread
 {
     Thread() = default;
-    Thread(void (*threadPointer)(void), uint16_t threadId, TaskType taskType = TaskType::NORMAL)
-        : threadPointer{threadPointer}, threadId{threadId}, taskType{taskType}
+    Thread(void (*threadPointer)(void), uint16_t threadId, TaskType taskType = TaskType::NORMAL, uint8_t priority = 1)
+        : threadPointer{threadPointer}, threadId{threadId}, taskType{taskType}, priority{priority}
     {
     }
     uint32_t* stackPtr{nullptr};
     Thread* nextPtr{nullptr};
     void (*threadPointer)(void);
-
-    // Thread* getNextPtr()
-    // {
-    //     // logSizeChange();
-    //     // logLocalInfo();
-    //     // nextPtr->logLocalInfo();
-    //     // LOG_DEBUG("  ");
-    //     return nextPtr;
-    // }
 
     const char* printThreadInfo();
 
@@ -77,7 +68,6 @@ struct Thread
 
     const uint16_t threadId{0};
     TaskType taskType{TaskType::NORMAL};
-    TaskClass task_class{TaskClass::NORMAL};
     ThreadState state{ThreadState::READY};
 
     uint8_t priority{1};
