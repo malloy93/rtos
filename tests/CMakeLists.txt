@@ -3,6 +3,8 @@ project(rtos_tests CXX)
 
 enable_testing()
 
+find_package(Python3 COMPONENTS Interpreter REQUIRED)
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -47,8 +49,19 @@ target_compile_options(test_Core PRIVATE -include ${RTOS_TEST_LOGGER_STUB})
 target_compile_definitions(test_Core PRIVATE RTOS_HOST_TEST)
 target_link_libraries(test_Core PRIVATE GTest::gtest_main)
 
+add_executable(test_UartProtocol
+    unit/test_UartProtocol.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../kernel/src/Logger.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../kernel/src/Telemetry/UartProtocol.cpp)
+target_include_directories(test_UartProtocol PRIVATE ${RTOS_TEST_INCLUDE_DIRECTORIES})
+target_link_libraries(test_UartProtocol PRIVATE GTest::gtest_main)
+
 include(GoogleTest)
 gtest_discover_tests(test_MemoryPool)
 gtest_discover_tests(test_Scheduler)
 gtest_discover_tests(test_ModernScheduler)
 gtest_discover_tests(test_Core)
+gtest_discover_tests(test_UartProtocol)
+add_test(
+    NAME uart_receiver
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/unit/test_uart_receiver.py)

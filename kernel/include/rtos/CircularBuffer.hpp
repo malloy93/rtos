@@ -1,5 +1,6 @@
 #pragma once
-#include <atomic>
+
+#include <cstddef>
 #include <cstdint>
 #include <span>
 
@@ -12,44 +13,51 @@ public:
 
     bool push(std::span<char> data)
     {
-        // mutex here
-        for (auto byte : data)
+        return pushAll(std::span<const uint8_t>(
+            reinterpret_cast<const uint8_t*>(data.data()), data.size()));
+    }
+
+    // Enqueue the whole span or nothing. Callers must serialize producers.
+    bool pushAll(std::span<const uint8_t> data)
+    {
+        if (data.size() > freeSpace()) return false;
+
+        size_t write = head;
+        for (const uint8_t byte : data)
         {
-            size_t next_head = (head + 1) % CIRCULAR_BUFFER_SIZE;
-            if (next_head == tail)
-            {
-                return false;
-            }
-            buffer[head] = static_cast<uint8_t>(byte);
-            head = next_head;
+            buffer[write] = byte;
+            write = (write + 1U) % CIRCULAR_BUFFER_SIZE;
         }
+
+        head = write;
         return true;
     }
 
     bool isEmpty() const { return head == tail; }
 
+    size_t size() const { return (head + CIRCULAR_BUFFER_SIZE - tail) % CIRCULAR_BUFFER_SIZE; }
+
+    size_t freeSpace() const { return CIRCULAR_BUFFER_SIZE - 1U - size(); }
+
     uint8_t* getReadPtr() { return &buffer[tail]; }
 
-    size_t getLinearBlockSize()
+    size_t getLinearBlockSize() const
     {
-        size_t h = head;
-        size_t t = tail;
-
-        if (h == t) return 0;
-
-        if (h > t)
-        {
-            return h - t;
-        }
-        else
-        {
-            return CIRCULAR_BUFFER_SIZE - t;
-        }
+        if (head == tail) return 0;
+        if (head > tail) return head - tail;
+        return CIRCULAR_BUFFER_SIZE - tail;
     }
+
     void advanceTail(size_t amount) { tail = (tail + amount) % CIRCULAR_BUFFER_SIZE; }
+
+    void clear()
+    {
+        head = 0U;
+        tail = 0U;
+    }
 
 private:
     uint8_t buffer[CIRCULAR_BUFFER_SIZE] = {0};
-    volatile size_t head{0};
-    volatile size_t tail{0};
+    size_t head{0};
+    size_t tail{0};
 };

@@ -1,13 +1,13 @@
 
 #include "main.hpp"
-#include <memory>
-#include <vector>
-#include <rtos/Core.hpp>
-#include <rtos/Logger.hpp>
-#include <rtos/SysApi.hpp>
 #include <board/dma.hpp>
 #include <board/gpio.hpp>
 #include <board/usart.h>
+#include <memory>
+#include <rtos/Core.hpp>
+#include <rtos/Logger.hpp>
+#include <rtos/SysApi.hpp>
+#include <vector>
 volatile uint32_t thread_switch_counter = 0;
 
 int x{0};
@@ -27,23 +27,23 @@ void task5();
 
 core::RTCore* rtKernel;
 
-void Test_Send_String_DMA(void)
-{
-    // KROK 1: Dane muszą być STATIC (lub globalne).
-    // Dlaczego? Funkcja HAL_UART_Transmit_DMA wraca natychmiast (nie blokuje).
-    // Gdyby to była zwykła tablica 'char buf[]', przestałaby istnieć po wyjściu z tej funkcji,
-    // a DMA wysyłałoby śmieci z pamięci RAM.
-    static const char message[] = "To jest dlugi tekst wyslany przez DMA!\r\n";
+// void Test_Send_String_DMA(void)
+// {
+//     // KROK 1: Dane muszą być STATIC (lub globalne).
+//     // Dlaczego? Funkcja HAL_UART_Transmit_DMA wraca natychmiast (nie blokuje).
+//     // Gdyby to była zwykła tablica 'char buf[]', przestałaby istnieć po wyjściu z tej funkcji,
+//     // a DMA wysyłałoby śmieci z pamięci RAM.
+//     static const char message[] = "To jest dlugi tekst wyslany przez DMA!\r\n";
 
-    // KROK 2: Sprawdzamy, czy poprzednia transmisja się zakończyła.
-    // Bez tego, jeśli wywołasz funkcję za szybko, HAL zwróci HAL_BUSY i nic nie wyśle.
-    if (huart1.gState == HAL_UART_STATE_READY)
-    {
-        // KROK 3: Uruchomienie DMA
-        // Rzutujemy (char*) na (uint8_t*), bo tego wymaga HAL.
-        HAL_UART_Transmit_DMA(&huart1, (uint8_t*)message, strlen(message));
-    }
-}
+//     // KROK 2: Sprawdzamy, czy poprzednia transmisja się zakończyła.
+//     // Bez tego, jeśli wywołasz funkcję za szybko, HAL zwróci HAL_BUSY i nic nie wyśle.
+//     if (huart1.gState == HAL_UART_STATE_READY)
+//     {
+//         // KROK 3: Uruchomienie DMA
+//         // Rzutujemy (char*) na (uint8_t*), bo tego wymaga HAL.
+//         HAL_UART_Transmit_DMA(&huart1, (uint8_t*)message, strlen(message));
+//     }
+// }
 
 int main(void)
 

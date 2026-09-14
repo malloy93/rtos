@@ -3,6 +3,7 @@ add_library(rtos_kernel OBJECT
     src/Logger.cpp
     src/MemoryPool.cpp
     src/SysTasks.cpp
+    src/Telemetry/UartProtocol.cpp
     src/Thread.cpp
     src/Utils.cpp
     src/osKernelAsm.s)
