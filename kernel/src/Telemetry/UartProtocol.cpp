@@ -1,7 +1,6 @@
 #include <rtos/Telemetry/UartProtocol.hpp>
 
 #include <array>
-#include <cstring>
 
 namespace
 {
@@ -36,12 +35,14 @@ uint16_t crc16CcittFalse(std::span<const uint8_t> data)
 size_t encodeFrame(
     MessageId id,
     std::span<const uint8_t> payload,
-    std::span<uint8_t> wireFrame)
+    std::span<uint8_t> wireFrame,
+    std::span<const uint8_t> prefix)
 {
-    if (!isValidMessageId(id) || payload.size() > MAX_PAYLOAD_BYTES || wireFrame.empty()) return 0U;
+    if (!isValidMessageId(id) || wireFrame.empty() ||
+        prefix.size() > MAX_PAYLOAD_BYTES || payload.size() > MAX_PAYLOAD_BYTES - prefix.size()) return 0U;
 
     const uint16_t rawId = static_cast<uint16_t>(id);
-    const uint16_t payloadLength = static_cast<uint16_t>(payload.size());
+    const uint16_t payloadLength = static_cast<uint16_t>(prefix.size() + payload.size());
     const std::array<uint8_t, HEADER_SIZE> header{
         PROTOCOL_VERSION,
         RESERVED_FLAGS,
@@ -51,14 +52,14 @@ size_t encodeFrame(
         static_cast<uint8_t>(payloadLength >> 8U),
     };
 
-    const uint16_t crc = updateCrc16(crc16CcittFalse(header), payload);
+    const uint16_t crc = updateCrc16(updateCrc16(crc16CcittFalse(header), prefix), payload);
     const std::array<uint8_t, CRC_SIZE> checksum{
         static_cast<uint8_t>(crc), static_cast<uint8_t>(crc >> 8U),
     };
 
-    // Stream the three packet parts through COBS without a second packet buffer.
+    // Stream the header, payload segments, and checksum through COBS.
     const std::array parts{
-        std::span<const uint8_t>(header), payload, std::span<const uint8_t>(checksum),
+        std::span<const uint8_t>(header), prefix, payload, std::span<const uint8_t>(checksum),
     };
     size_t write = 1U;
     size_t codePosition = 0U;
@@ -118,12 +119,18 @@ bool UartProtocol::sendLog(core::LogLevel level, std::string_view text)
     while (!text.empty() && (text.back() == '\r' || text.back() == '\n')) text.remove_suffix(1U);
     if (text.size() > MAX_LOG_TEXT_BYTES) return false;
 
-    std::array<uint8_t, MAX_LOG_TEXT_BYTES + 1U> payload{};
-    payload[0] = static_cast<uint8_t>(level);
-    if (!text.empty()) std::memcpy(payload.data() + 1U, text.data(), text.size());
-    return send(
+    // Encode the level and the caller's text directly into a log-sized frame.
+    const uint8_t levelByte = static_cast<uint8_t>(level);
+    const auto textBytes = std::span<const uint8_t>(
+        reinterpret_cast<const uint8_t*>(text.data()), text.size());
+    std::array<uint8_t, MAX_LOG_WIRE_PACKET_BYTES> frame{};
+    const size_t frameSize = codec::encodeFrame(
         MessageId::LOG_TEXT,
-        std::span<const uint8_t>(payload.data(), text.size() + 1U));
+        textBytes,
+        frame,
+        std::span<const uint8_t>(&levelByte, 1U));
+    return frameSize != 0U &&
+        txBuffer.pushAll(std::span<const uint8_t>(frame.data(), frameSize));
 }
 
 void UartProtocol::processTx()

@@ -21,6 +21,10 @@ constexpr size_t MAX_PAYLOAD_BYTES = 500U;
 constexpr size_t MAX_DECODED_PACKET_BYTES = HEADER_SIZE + MAX_PAYLOAD_BYTES + CRC_SIZE;
 constexpr size_t MAX_WIRE_PACKET_BYTES = 512U;
 constexpr size_t MAX_LOG_TEXT_BYTES = 127U;
+constexpr size_t MAX_LOG_DECODED_PACKET_BYTES = HEADER_SIZE + 1U + MAX_LOG_TEXT_BYTES + CRC_SIZE;
+// COBS block overhead, a final code byte, and the delimiter.
+constexpr size_t MAX_LOG_WIRE_PACKET_BYTES =
+    MAX_LOG_DECODED_PACKET_BYTES + MAX_LOG_DECODED_PACKET_BYTES / 254U + 2U;
 
 enum class OutputMode : uint8_t
 {
@@ -32,10 +36,12 @@ namespace codec
 {
 
 uint16_t crc16CcittFalse(std::span<const uint8_t> data);
+// The optional prefix is part of the payload, encoded without concatenating buffers.
 size_t encodeFrame(
     MessageId id,
     std::span<const uint8_t> payload,
-    std::span<uint8_t> wireFrame);
+    std::span<uint8_t> wireFrame,
+    std::span<const uint8_t> prefix = {});
 
 } // namespace codec
 

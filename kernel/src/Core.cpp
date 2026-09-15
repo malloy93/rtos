@@ -1,5 +1,5 @@
-#include <rtos/Core.hpp>
 #include <algorithm>
+#include <rtos/Core.hpp>
 #ifndef RTOS_HOST_TEST
 #include "Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f429xx.h"
 #include "Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f4xx.h"
@@ -35,10 +35,10 @@ RTCore* RTCore::getInstance()
     return kernelInstance;
 }
 
-void RTCore::createStack(uint16_t threadId)
+void RTCore::createStack(uint16_t threadId, StackSize size)
 {
     // Stack* stack = new Stack{threadId};
-    auto stackId = memoryPool.allocateStack(StackSize::SIZE_2kB);
+    auto stackId = memoryPool.allocateStack(size);
     if (stackId == invalidStackId)
     {
         LOG_ERROR("Failed to allocate stack for thread ID: %d", threadId);
@@ -96,18 +96,6 @@ uint16_t RTCore::createThread(void (*threadPointer)(), TaskType type)
     threadControlBlocks.push_back(thread);
 
     return threadId;
-}
-
-uint8_t RTCore::addThreads(std::vector<void (*)()>& threads)
-{
-    const auto numThreads = threads.size(); // 4
-    LOG_INFO("Adding threads.");
-    for (std::size_t i = 0; i < numThreads; i++)
-    {
-        auto threadId = createThread(threads.at(i), TaskType::NORMAL);
-        createStack(threadId);
-    }
-    return 1;
 }
 
 void RTCore::initializeScheduler()
@@ -204,11 +192,15 @@ void RTCore::suspend(uint16_t threadId)
     }
 }
 
-uint16_t RTCore::add(void (*threadPointer)(), TaskType type)
+uint16_t RTCore::add(
+    void (*threadPointer)(),
+    TaskType type,
+    StackSize stackSize,
+    [[maybe_unused]] uint8_t priority)
 {
     auto threadId = createThread(threadPointer, type);
 
-    createStack(threadId);
+    createStack(threadId, stackSize);
     activeStacks.push_back(threadControlBlocks.back());
     LOG_INFO("Thread with ID: %d added successfully", threadId);
     return threadId;

@@ -1,14 +1,14 @@
 
 #include "main.hpp"
-#include <cstring>
-#include <memory>
-#include <vector>
-#include <rtos/Core.hpp>
-#include <rtos/Logger.hpp>
-#include <rtos/SysApi.hpp>
 #include <board/dma.hpp>
 #include <board/gpio.hpp>
 #include <board/usart.h>
+#include <cstring>
+#include <memory>
+#include <rtos/Core.hpp>
+#include <rtos/Logger.hpp>
+#include <rtos/SysApi.hpp>
+#include <vector>
 volatile uint32_t thread_switch_counter = 0;
 
 int x{0};
@@ -75,11 +75,11 @@ int main(void)
     // Test_Send_String_DMA();
     // rtKernel->addThreads(threads);
     // rtKernel->addSystemThreads();
-    rtKernel->add(task0);
-    rtKernel->add(task1);
-    rtKernel->add(task2);
-    rtKernel->add(task4);
-    rtKernel->add(task5);
+    // rtKernel->add(task0, core::TaskType::SOFT_RT, core::StackSize::SIZE_2kB);
+    rtKernel->add(task1, core::TaskType::SOFT_RT, core::StackSize::SIZE_1kB);
+    // rtKernel->add(task2, core::TaskType::SOFT_RT, core::StackSize::SIZE_2kB);
+    // rtKernel->add(task4, core::TaskType::SOFT_RT, core::StackSize::SIZE_2kB);
+    // rtKernel->add(task5, core::TaskType::SOFT_RT, core::StackSize::SIZE_1kB);
     rtKernel->launch();
 
     while (1)

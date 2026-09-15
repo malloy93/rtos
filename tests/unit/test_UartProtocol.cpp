@@ -131,6 +131,33 @@ TEST(UartProtocolCodec, UsesKnownCrcVector)
     EXPECT_EQ(telemetry::codec::crc16CcittFalse(input), 0x29B1U);
 }
 
+TEST(UartProtocolCodec, PrefixMatchesAContiguousPayload)
+{
+    constexpr auto id = static_cast<telemetry::MessageId>(0x1234U);
+    constexpr std::array<uint8_t, 7> payload{0U, 1U, 0U, 2U, 3U, 0U, 4U};
+    const auto expected = encode(id, payload);
+    for (size_t split = 0U; split <= payload.size(); ++split)
+    {
+        std::array<uint8_t, telemetry::MAX_WIRE_PACKET_BYTES> output{};
+        const auto bytes = std::span<const uint8_t>(payload);
+        const size_t size = telemetry::codec::encodeFrame(
+            id, bytes.subspan(split), output, bytes.first(split));
+        ASSERT_EQ(size, expected.size());
+        EXPECT_TRUE(std::equal(expected.begin(), expected.end(), output.begin()));
+    }
+}
+
+TEST(UartProtocolCodec, CountsPrefixAgainstPayloadLimit)
+{
+    constexpr auto id = static_cast<telemetry::MessageId>(1U);
+    std::array<uint8_t, telemetry::MAX_PAYLOAD_BYTES + 1U> bytes{};
+    std::array<uint8_t, telemetry::MAX_WIRE_PACKET_BYTES> output{};
+    const auto data = std::span<const uint8_t>(bytes);
+    EXPECT_NE(telemetry::codec::encodeFrame(id, data.first(499U), output, data.first(1U)), 0U);
+    EXPECT_EQ(telemetry::codec::encodeFrame(id, data.first(500U), output, data.first(1U)), 0U);
+    EXPECT_EQ(telemetry::codec::encodeFrame(id, {}, output, data), 0U);
+}
+
 TEST(UartProtocolCodec, EncodesEmptyPayloadAndLittleEndianHeader)
 {
     constexpr auto id = static_cast<telemetry::MessageId>(0x1234U);
@@ -259,6 +286,38 @@ TEST(UartProtocolLogs, HonorsModeAndEncodesLevelWithoutLineEnding)
     EXPECT_EQ(std::string(packet.payload.begin() + 1, packet.payload.end()), "message");
 }
 
+TEST(UartProtocolLogs, SmallFramePreservesEmptyAndMaximumLengthLogs)
+{
+    UART_HandleTypeDef uart{};
+    telemetry::UartProtocol protocol;
+    const std::array texts{
+        std::string{},
+        std::string(telemetry::MAX_LOG_TEXT_BYTES, 'x'),
+        std::string(telemetry::MAX_LOG_TEXT_BYTES, '\0'),
+    };
+    for (const auto& text : texts)
+    {
+        resetDmaMock();
+        protocol.init(&uart, telemetry::OutputMode::DATA_AND_LOGS);
+        ASSERT_TRUE(protocol.sendLog(core::LogLevel::KERNEL, text + "\r\n"));
+        const size_t pending = protocol.pendingBytes();
+        EXPECT_LE(pending, telemetry::MAX_LOG_WIRE_PACKET_BYTES);
+        EXPECT_FALSE(protocol.sendLog(
+            core::LogLevel::INFO, std::string(telemetry::MAX_LOG_TEXT_BYTES + 1U, 'x')));
+        EXPECT_EQ(protocol.pendingBytes(), pending);
+        protocol.processTx();
+        completeDma(&uart);
+        protocol.processTx();
+
+        TestPacket packet;
+        ASSERT_TRUE(decodeWire(wireBytes, packet));
+        ASSERT_EQ(packet.messageId, static_cast<uint16_t>(telemetry::MessageId::LOG_TEXT));
+        ASSERT_EQ(packet.payload.size(), text.size() + 1U);
+        EXPECT_EQ(packet.payload[0], static_cast<uint8_t>(core::LogLevel::KERNEL));
+        EXPECT_EQ(std::string(packet.payload.begin() + 1, packet.payload.end()), text);
+    }
+}
+
 TEST(UartProtocolDma, RetainsDataUntilCompletionAndHandlesBusy)
 {
     resetDmaMock();
@@ -352,4 +411,16 @@ TEST(Logger, FormatsTextWithoutRawStartupNullOrLineEnding)
     EXPECT_EQ(text, "value=42");
     EXPECT_EQ(std::count(packet.payload.begin(), packet.payload.end(), 0U), 0);
     EXPECT_EQ(text.find("\r\n"), std::string::npos);
+
+    wireBytes.clear();
+    const std::string longText(300U, 'x');
+    logger->log(core::LogLevel::INFO, "%s", longText.c_str());
+    logger->send();
+    completeDma(&uart);
+    logger->send();
+    EXPECT_EQ(wireBytes.size(), telemetry::MAX_LOG_WIRE_PACKET_BYTES);
+    ASSERT_TRUE(decodeWire(wireBytes, packet));
+    ASSERT_EQ(packet.payload.size(), telemetry::MAX_LOG_TEXT_BYTES + 1U);
+    EXPECT_EQ(std::string(packet.payload.begin() + 1, packet.payload.end()),
+              longText.substr(0U, telemetry::MAX_LOG_TEXT_BYTES));
 }

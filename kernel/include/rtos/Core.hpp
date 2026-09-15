@@ -25,7 +25,6 @@ public:
     static void init(utils::IdGen&);
     static RTCore* getInstance();
 
-    uint8_t addThreads(std::vector<void (*)()>&);
     void launch();
 
     void logThreadInfo();
@@ -41,7 +40,11 @@ public:
         return nullptr;
     }
 
-    uint16_t add(void (*)(), TaskType type = TaskType::NORMAL);
+    uint16_t add(
+        void (*threadPointer)(),
+        TaskType type = TaskType::NORMAL,
+        StackSize stackSize = StackSize::SIZE_1kB,
+        uint8_t priority = 1);
     void remove(uint16_t);
     void suspend(uint16_t);
     void runAllocator()
@@ -63,19 +66,6 @@ public:
         // scheduler.printResourceAllocation();
     }
     void pushLog(std::span<char> data) { loggerBuffer.push(data); }
-
-    // Thread* getNextThread()
-    // {
-    //     switch (schedulerType)
-    //     {
-    //         case SchedulerType::ROUND_ROBIN:
-    //             return getNextThreadRoundRobin();
-    //         case SchedulerType::PRIORITY_BASED:
-    //             return getNextThreadPriorityBased();
-    //         default:
-    //             return getNextThreadRoundRobin();
-    //     }
-    // }
 
     Thread* getNextThread()
     {
@@ -121,11 +111,11 @@ public:
 
     void addSystemThreads()
     {
-        add(sysTasks::resourceAllocatorTask, TaskType::SYSTEM);
-        add(sysTasks::idleTask, TaskType::SYSTEM);
-        add(sysTasks::eventTracerTask, TaskType::SYSTEM);
-        add(sysTasks::resourceUpdateTask, TaskType::SYSTEM);
-        add(sysTasks::systemReconfigurationTask, TaskType::SYSTEM);
+        add(sysTasks::resourceAllocatorTask, TaskType::SYSTEM, StackSize::SIZE_2kB);
+        add(sysTasks::idleTask, TaskType::SYSTEM, StackSize::SIZE_2kB);
+        add(sysTasks::eventTracerTask, TaskType::SYSTEM, StackSize::SIZE_2kB);
+        add(sysTasks::resourceUpdateTask, TaskType::SYSTEM, StackSize::SIZE_2kB);
+        add(sysTasks::systemReconfigurationTask, TaskType::SYSTEM, StackSize::SIZE_2kB);
 
         idGen.setId(10);
     }
@@ -146,10 +136,11 @@ private:
     bool nextListReady{false};
     void initializeScheduler();
     uint16_t createThread(void (*)(), TaskType type);
-    void createStack(uint16_t);
+    void createStack(uint16_t, StackSize = StackSize::SIZE_2kB);
 
     RTCore(utils::IdGen& idGen) : idGen{idGen}
     {
+        LOG_INFO("RTOS");
         LOG_INFO("Initializing core");
         systickPrescaler = utils::getClockFreq() / 1000;
         LOG_INFO("System clock frequency: %d Hz", utils::getClockFreq());
